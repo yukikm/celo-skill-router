@@ -1,0 +1,10 @@
+{
+  "name": "celo-tabless",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint"
+  }
+}
