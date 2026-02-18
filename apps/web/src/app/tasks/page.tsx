@@ -59,7 +59,7 @@ export default async function TasksPage() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ fontWeight: 800 }}>{t.title}</div>
-                <div style={{ fontSize: 12, color: "#a1a1aa" }}>{t.status}</div>
+                <div style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: 700, background: t.status === "OPEN" ? "rgba(52,211,153,0.15)" : t.status === "APPROVED" ? "rgba(16,185,129,0.15)" : "rgba(251,191,36,0.15)", color: t.status === "OPEN" ? "#34d399" : t.status === "APPROVED" ? "#10b981" : "#fbbf24" }}>{t.status}</div>
               </div>
               <div style={{ fontSize: 13, color: "#c7c7cf", marginTop: 6 }}>
                 skill: <b>{t.skill}</b> • budget: <b>{t.budgetUsd} USDm</b>

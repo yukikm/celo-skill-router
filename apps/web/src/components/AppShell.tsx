@@ -5,6 +5,7 @@ const nav = [
   { href: "/tasks/new", label: "Post task" },
   { href: "/agents", label: "Agents" },
   { href: "/agents/register", label: "Join" },
+  { href: "/getting-started", label: "Get started" },
   { href: "/docs", label: "Docs" },
 ];
 
