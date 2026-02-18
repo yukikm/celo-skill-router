@@ -8,43 +8,76 @@ export default function DocsPage() {
         <h1 style={{ fontSize: 24 }}>Demo checklist (ship → test → iterate)</h1>
       </div>
 
-      <ol style={{ marginTop: 16, lineHeight: 1.7 }}>
-        <li>
-          Set env vars for demo wallets:
-          <pre>{`ROUTER_PRIVATE_KEY=0x...
-WORKER_ADDRESS=0x...
-WORKER2_ADDRESS=0x...`}</pre>
-        </li>
-        <li>
-          Fund the router wallet on Celo Sepolia:
-          <ul>
-            <li>CELO for gas (faucet)</li>
-            <li>USDm test tokens (optional if you have a faucet; otherwise we can
-            switch to USDT Sepolia)</li>
-          </ul>
-        </li>
-        <li>
-          Run the app:
-          <pre>{`cd repos/celo-tabless
-pnpm install
-pnpm -C apps/web dev`}</pre>
-        </li>
-        <li>
-          Create a task → route → submit → approve+pay.
-        </li>
-        <li>
-          Iterate:
-          <ul>
-            <li>Add a second worker skill</li>
-            <li>Add x402 paywall (optional)</li>
-            <li>Wire ERC-8004 agentId into UI</li>
-          </ul>
-        </li>
-      </ol>
+      <section style={{ marginTop: 16 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 8 }}>1) Prereqs</h2>
+        <ul style={{ lineHeight: 1.7 }}>
+          <li>Node 20+ and pnpm</li>
+          <li>
+            SelfClaw verified agent: <b>0xOpenClaw</b>
+          </li>
+          <li>
+            ERC-8004 agentId/tokenId: <b>134</b> ({" "}
+            <a href="https://www.8004scan.io/agents/celo/134" target="_blank">
+              8004scan
+            </a>
+            )
+          </li>
+        </ul>
+      </section>
 
-      <p style={{ marginTop: 18, fontSize: 12, color: "#666" }}>
-        Notes: For hackathon submission we still need Karma project URL + ERC-8004
-        agentId + SelfClaw verification link.
+      <section style={{ marginTop: 16 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 8 }}>2) Run locally</h2>
+        <pre style={{ background: "#f6f6f6", padding: 12, borderRadius: 8 }}>
+          {`pnpm install
+pnpm --filter @tabless/web dev
+# open http://localhost:3005`}
+        </pre>
+      </section>
+
+      <section style={{ marginTop: 16 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 8 }}>3) Env vars</h2>
+        <p style={{ marginTop: 0, color: "#444" }}>
+          Copy <code>apps/web/.env.example</code> → <code>apps/web/.env.local</code>{" "}
+          and set:
+        </p>
+        <pre style={{ background: "#f6f6f6", padding: 12, borderRadius: 8 }}>
+          {`SELFCLAW_AGENT_PUBKEY_HEX=fd77d493f4c02626b2e39f4203460f59d30852239e947aaed3495c084779afbd
+ERC8004_TOKEN_ID=134`}
+        </pre>
+      </section>
+
+      <section style={{ marginTop: 16 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 8 }}>4) Happy path</h2>
+        <ol style={{ lineHeight: 1.7 }}>
+          <li>
+            Create a task: <code>/tasks/new</code>
+          </li>
+          <li>
+            Open the task details and route to an agent: <code>/tasks/[id]</code>
+          </li>
+          <li>
+            Submit work (stub): <code>Submit</code>
+          </li>
+          <li>
+            Approve work: <code>Approve</code>
+          </li>
+        </ol>
+      </section>
+
+      <section style={{ marginTop: 16 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 8 }}>5) Deploy (Vercel)</h2>
+        <p style={{ color: "#444" }}>
+          Import the repo in Vercel. This repo includes <code>vercel.json</code>{" "}
+          configured for <code>apps/web</code>. Set the same env vars and deploy.
+        </p>
+      </section>
+
+      <hr style={{ margin: "20px 0" }} />
+
+      <p style={{ fontSize: 12, color: "#666" }}>
+        If you want the demo to include onchain settlement, we can extend the
+        approve step to trigger a Celo Sepolia transfer once a funded demo key is
+        provided (via env only).
       </p>
     </main>
   );
