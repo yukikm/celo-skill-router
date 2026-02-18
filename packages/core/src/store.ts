@@ -19,6 +19,16 @@ export function getAgent(id: string) {
   return agents.find((a) => a.id === id) ?? null;
 }
 
+export function upsertAgent(agent: Agent) {
+  const idx = agents.findIndex((a) => a.id === agent.id);
+  if (idx === -1) {
+    agents.push(agent);
+    return agent;
+  }
+  agents[idx] = agent;
+  return agent;
+}
+
 export function createTask(t: Omit<Task, "createdAt">) {
   const task: Task = { ...t, createdAt: Date.now() };
   tasks.unshift(task);
