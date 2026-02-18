@@ -25,6 +25,8 @@ type Task = {
 export default function TaskPage({ params }: { params: { id: string } }) {
   const [task, setTask] = useState<Task | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pollingPayout, setPollingPayout] = useState(false);
+  const [lastPayoutCheckAt, setLastPayoutCheckAt] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [autoRefreshCount, setAutoRefreshCount] = useState(0);
 
@@ -53,7 +55,7 @@ export default function TaskPage({ params }: { params: { id: string } }) {
     if (autoRefreshCount >= 8) return;
 
     const t = setTimeout(async () => {
-      await refreshPayout();
+      await refreshPayout({ silent: true });
       setAutoRefreshCount((c) => c + 1);
     }, 6000);
 
@@ -80,8 +82,10 @@ export default function TaskPage({ params }: { params: { id: string } }) {
     }
   }
 
-  async function refreshPayout() {
-    setBusy(true);
+  async function refreshPayout(opts?: { silent?: boolean }) {
+    const silent = !!opts?.silent;
+    if (!silent) setBusy(true);
+    setPollingPayout(true);
     setErr(null);
     try {
       const res = await fetch(`/api/tasks/${params.id}/refresh-payout`, {
@@ -89,11 +93,16 @@ export default function TaskPage({ params }: { params: { id: string } }) {
       });
       const data = await res.json();
       if (!res.ok || data.ok === false) {
-        setErr(data.error ? JSON.stringify(data.error) : JSON.stringify(data));
+        // During background polling we avoid spamming the UI with transient errors.
+        if (!silent) {
+          setErr(data.error ? JSON.stringify(data.error) : JSON.stringify(data));
+        }
       }
+      setLastPayoutCheckAt(Date.now());
       await refresh();
     } finally {
-      setBusy(false);
+      setPollingPayout(false);
+      if (!silent) setBusy(false);
     }
   }
 
@@ -145,7 +154,12 @@ export default function TaskPage({ params }: { params: { id: string } }) {
             status: <b>{task.payoutReceiptFound ? "confirmed" : "pending"}</b>
             {!task.payoutReceiptFound ? (
               <span style={{ color: "#666" }}>
-                {" "}(auto-refreshing…)
+                {" "}(auto-checking confirmation… {autoRefreshCount + 1}/8)
+                {lastPayoutCheckAt ? (
+                  <span style={{ color: "#777" }}>
+                    {" "}· last check {Math.round((Date.now() - lastPayoutCheckAt) / 1000)}s ago
+                  </span>
+                ) : null}
               </span>
             ) : null}
           </div>
@@ -204,8 +218,8 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           Approve + pay
         </button>
         {task.payoutTxHash ? (
-          <button disabled={busy} onClick={refreshPayout}>
-            Refresh payout status
+          <button disabled={busy || pollingPayout} onClick={() => refreshPayout()}>
+            {pollingPayout ? "Checking payout…" : "Refresh payout status"}
           </button>
         ) : null}
         <button disabled={busy} onClick={refresh}>
