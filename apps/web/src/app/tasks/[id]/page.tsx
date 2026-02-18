@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
+import { CELO_SEPOLIA_USDM } from "@tabless/celo";
 
 type Task = {
   id: string;
@@ -22,8 +23,15 @@ type Task = {
   payoutToBalanceAfter?: string;
 };
 
+type Worker = {
+  id: string;
+  name: string;
+  address: string;
+};
+
 export default function TaskPage({ params }: { params: { id: string } }) {
   const [task, setTask] = useState<Task | null>(null);
+  const [worker, setWorker] = useState<Worker | null>(null);
   const [busy, setBusy] = useState(false);
   const [pollingPayout, setPollingPayout] = useState(false);
   const [lastPayoutCheckAt, setLastPayoutCheckAt] = useState<number | null>(null);
@@ -59,6 +67,7 @@ export default function TaskPage({ params }: { params: { id: string } }) {
     const res = await fetch(`/api/tasks/${params.id}`, { cache: "no-store" });
     const data = await res.json();
     setTask(data.task);
+    setWorker(data.worker ?? null);
   }
 
   async function refreshDemoStatus() {
@@ -167,6 +176,8 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           : task.payoutReceiptFound
             ? null
             : { key: "refresh", label: "Refresh payout status", hint: "Checking finality — explorer + balances update once confirmed." };
+
+  const payoutAmountUsdM = Math.max(1, Number(task.budgetUsd || "1"));
 
   function ctaStyle(active: boolean) {
     return active
@@ -286,7 +297,33 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
       {task.workerAgentId ? (
         <div style={{ marginTop: 12, fontSize: 13, color: "#333" }}>
-          routed to: <b>{task.workerAgentId}</b>
+          <div>
+            routed to: <b>{worker?.name ?? task.workerAgentId}</b>
+            <span style={{ color: "#666" }}> ({task.workerAgentId})</span>
+          </div>
+          {worker?.address ? (
+            <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", color: "#555" }}>
+              <span>
+                worker address: <code title={worker.address}>{shortHex(worker.address)}</code>
+              </span>
+              <button
+                type="button"
+                onClick={() => copy(worker.address)}
+                disabled={busy}
+                style={{ fontSize: 12, padding: "4px 8px" }}
+                title="Copy worker address"
+              >
+                {copied === worker.address ? "Copied" : "Copy"}
+              </button>
+              <a
+                href={`${demo?.celoscanBaseUrl ?? "https://sepolia.celoscan.io"}/address/${worker.address}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View worker on Celoscan
+              </a>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -320,7 +357,7 @@ export default function TaskPage({ params }: { params: { id: string } }) {
               </span>
             ) : null}
           </div>
-          <div style={{ marginTop: 6 }}>
+          <div style={{ marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
             <a
               href={`${demo?.celoscanBaseUrl ?? "https://sepolia.celoscan.io"}/tx/${task.payoutTxHash}`}
               target="_blank"
@@ -328,6 +365,31 @@ export default function TaskPage({ params }: { params: { id: string } }) {
             >
               View on Celoscan
             </a>
+            <a
+              href={`${demo?.celoscanBaseUrl ?? "https://sepolia.celoscan.io"}/address/${CELO_SEPOLIA_USDM}`}
+              target="_blank"
+              rel="noreferrer"
+              title="USDm token contract"
+            >
+              USDm contract
+            </a>
+          </div>
+
+          <div style={{ marginTop: 8, padding: 10, borderRadius: 12, border: "1px solid #eee", background: "#fafafa" }}>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>Payment summary</div>
+            <div style={{ color: "#333" }}>
+              amount: <b>{payoutAmountUsdM} USDm</b>
+            </div>
+            {task.payoutFromAddress ? (
+              <div style={{ marginTop: 4, color: "#555" }}>
+                from (router): <code title={task.payoutFromAddress}>{shortHex(task.payoutFromAddress)}</code>
+              </div>
+            ) : null}
+            {worker?.address ? (
+              <div style={{ marginTop: 4, color: "#555" }}>
+                to (worker): <code title={worker.address}>{shortHex(worker.address)}</code>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
