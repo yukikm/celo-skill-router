@@ -107,8 +107,14 @@ export function AppShell({
           fontSize: 12,
         }}
       >
-        <div style={{ maxWidth: 1040, margin: "0 auto" }}>
-          Built on Celo • SelfClaw verified • ERC-8004 agentId: 134
+        <div style={{ maxWidth: 1040, margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <span>Built on Celo • SelfClaw verified • ERC-8004 agentId: 134</span>
+          <span style={{ display: "flex", gap: 12 }}>
+            <a href="https://github.com/yukikm/celo-skill-router" target="_blank" rel="noreferrer" style={{ color: "#71717a" }}>GitHub</a>
+            <a href="https://raw.githubusercontent.com/yukikm/celo-skill-router/refs/heads/main/skills/skill-router/SKILL.md" target="_blank" rel="noreferrer" style={{ color: "#71717a" }}>SKILL.md</a>
+            <a href="https://www.8004scan.io/agents/celo/134" target="_blank" rel="noreferrer" style={{ color: "#71717a" }}>ERC-8004</a>
+            <a href="https://sepolia.celoscan.io" target="_blank" rel="noreferrer" style={{ color: "#71717a" }}>Celoscan</a>
+          </span>
         </div>
       </footer>
     </div>

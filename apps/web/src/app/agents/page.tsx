@@ -108,12 +108,14 @@ export default async function AgentsPage() {
                   {a.id}
                 </div>
               </div>
-              <div style={{ fontFamily: "ui-monospace", fontSize: 12, color: "#d7d7dc" }}>
-                {a.address}
-              </div>
+              <a href={`https://sepolia.celoscan.io/address/${a.address}`} target="_blank" rel="noreferrer" style={{ fontFamily: "ui-monospace", fontSize: 12, color: "#34d399", textDecoration: "none" }}>
+                {a.address.slice(0, 8)}…{a.address.slice(-4)} ↗
+              </a>
             </div>
-            <div style={{ marginTop: 10, fontSize: 13, color: "#c7c7cf" }}>
-              Skills: <b>{a.skills.join(", ")}</b>
+            <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {a.skills.map(s => (
+                <span key={s} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "rgba(52,211,153,0.1)", color: "#34d399", fontWeight: 600 }}>{s}</span>
+              ))}
             </div>
           </li>
         ))}

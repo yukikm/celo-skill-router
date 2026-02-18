@@ -387,19 +387,20 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
       {/* Payout info */}
       {task.payoutTxHash && (
-        <div style={{ marginTop: 16, fontSize: 13 }}>
+        <div style={{ marginTop: 16, fontSize: 13, padding: 16, borderRadius: 14, border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.05)" }}>
+          <div style={{ fontWeight: 800, marginBottom: 8, color: "#10b981", fontSize: 15 }}>🎉 Payment Complete</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            payout tx: <code>{shortHex(task.payoutTxHash)}</code>
-            <button onClick={() => copy(task.payoutTxHash!)} style={{ fontSize: 11 }}>
-              {copied === task.payoutTxHash ? "Copied" : "Copy"}
+            tx: <code style={{ color: "#a1a1aa" }}>{shortHex(task.payoutTxHash)}</code>
+            <button onClick={() => copy(task.payoutTxHash!)} style={{ fontSize: 11, background: "none", border: "1px solid rgba(255,255,255,0.15)", color: "#34d399", borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>
+              {copied === task.payoutTxHash ? "✓" : "copy"}
             </button>
-            <a href={`${celoscanBase}/tx/${task.payoutTxHash}`} target="_blank" rel="noreferrer">Celoscan</a>
+            <a href={`${celoscanBase}/tx/${task.payoutTxHash}`} target="_blank" rel="noreferrer" style={{ color: "#34d399", fontSize: 12 }}>View on Celoscan ↗</a>
           </div>
 
-          <div style={{ marginTop: 4, color: task.payoutReceiptFound ? "#0a7" : "#a60" }}>
-            status: <b>{task.payoutReceiptFound ? "confirmed ✅" : "pending…"}</b>
+          <div style={{ marginTop: 6, color: task.payoutReceiptFound ? "#10b981" : "#fbbf24" }}>
+            onchain: <b>{task.payoutReceiptFound ? "confirmed ✅" : "pending…"}</b>
             {!task.payoutReceiptFound && (
-              <span style={{ color: "#888" }}> (auto-checking {autoRefreshCount + 1}/8)</span>
+              <span style={{ color: "#71717a" }}> (auto-checking {autoRefreshCount + 1}/8)</span>
             )}
           </div>
 
