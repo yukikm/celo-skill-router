@@ -1,4 +1,4 @@
-import { erc20Abi } from "viem";
+import { decodeEventLog, erc20Abi } from "viem";
 
 import { makePublicClient, makeWalletClient } from "./clients";
 

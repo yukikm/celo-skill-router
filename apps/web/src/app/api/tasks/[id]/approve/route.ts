@@ -6,14 +6,20 @@ import {
   erc20BalanceOf,
   erc20Transfer,
   makePublicClient,
+  verifyErc20Transfer,
 } from "@tabless/celo";
 import { privateKeyToAccount } from "viem/accounts";
 
-// This endpoint simulates the router agent releasing escrow to the worker.
-// For hackathon MVP, we pay from ROUTER_PRIVATE_KEY directly.
+/**
+ * Payment modes:
+ * - Custodial demo: server pays from ROUTER_PRIVATE_KEY/FUNDER_PRIVATE_KEY.
+ * - Open (agent-to-agent): if server key is missing, return 402 with payment terms.
+ *   Caller pays from their own wallet, then calls approve again with { payoutTxHash }
+ *   for best-effort onchain verification.
+ */
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -26,18 +32,6 @@ export async function POST(
     );
   }
 
-  // Demo safety: prevent accidental double-pays if someone clicks twice or refreshes.
-  if (task.status === "APPROVED" || task.payoutTxHash) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Task already approved/payout already initiated for this task. Create a new task to run the demo again.",
-      },
-      { status: 400 },
-    );
-  }
-
   const worker = getAgent(task.workerAgentId);
   if (!worker) {
     return NextResponse.json(
@@ -46,83 +40,174 @@ export async function POST(
     );
   }
 
-  const pk = (process.env.ROUTER_PRIVATE_KEY ??
-    process.env.FUNDER_PRIVATE_KEY) as `0x${string}` | undefined;
-  if (!pk) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Missing ROUTER_PRIVATE_KEY (preferred) or FUNDER_PRIVATE_KEY env var (funded demo wallet) to pay worker.",
-      },
-      { status: 500 },
-    );
-  }
-
-  if (worker.address.toLowerCase() === "0x0000000000000000000000000000000000000000") {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Worker address is not configured. Set WORKER_ADDRESS / WORKER2_ADDRESS env var(s) to real Celo Sepolia addresses.",
-      },
-      { status: 400 },
-    );
-  }
-
-  // MVP: interpret budgetUsd as a whole-number USDm amount.
-  // Demo reliability: never throw on weird input ("", "0", "abc").
-  // You can set budgets like "1" or "5" for demo.
+  // Budget parsing + clamp.
   const parsedBudget = Number.parseInt(String(task.budgetUsd ?? "1"), 10);
   const safeBudget = Number.isFinite(parsedBudget) && parsedBudget >= 1 ? parsedBudget : 1;
-  // Guardrail: prevent accidental huge transfers if someone types a crazy number.
   const clampedBudget = Math.min(safeBudget, 1_000);
-
   const amountUnits = BigInt(clampedBudget);
   const amount = amountUnits * 10n ** 18n;
 
-  const routerAccount = privateKeyToAccount(pk);
-  const routerAddress = routerAccount.address;
+  // Double-pay prevention.
+  if (task.status === "APPROVED" || task.payoutTxHash) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Task already approved / payout already initiated.",
+        task,
+      },
+      { status: 409 },
+    );
+  }
 
-  // Read balances pre-tx for demo visibility.
-  const [fromBefore, toBefore] = await Promise.all([
-    erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: routerAddress }),
-    erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: worker.address }),
-  ]);
+  const body = await req.json().catch(() => ({}));
+  const payoutTxHash = (body?.payoutTxHash as `0x${string}` | undefined) ?? undefined;
 
-  const hash = await erc20Transfer({
-    token: CELO_SEPOLIA_USDM,
-    fromPrivateKey: pk,
-    to: worker.address,
-    amount,
-  });
+  const serverPk = (process.env.ROUTER_PRIVATE_KEY ??
+    process.env.FUNDER_PRIVATE_KEY) as `0x${string}` | undefined;
 
-  // Best-effort wait so the UI can show real post-tx balances.
-  let fromAfter: bigint | null = null;
-  let toAfter: bigint | null = null;
-  let receiptFound = false;
-  try {
-    const pc = makePublicClient();
-    await pc.waitForTransactionReceipt({ hash, confirmations: 1, timeout: 25_000 });
-    receiptFound = true;
-    [fromAfter, toAfter] = await Promise.all([
+  // Open mode: server has no payer key → return x402-style payment terms.
+  if (!serverPk && !payoutTxHash) {
+    if (
+      worker.address.toLowerCase() ===
+      "0x0000000000000000000000000000000000000000"
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "No payable worker address. Register an agent with a real onchain address, then route again.",
+        },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+        paymentRequired: true,
+        status: 402,
+        // Payment terms
+        chainId: 11142220,
+        token: CELO_SEPOLIA_USDM,
+        tokenSymbol: "USDm",
+        tokenDecimals: 18,
+        recipient: worker.address,
+        amount: amount.toString(),
+        amountHuman: String(amountUnits),
+        memo: `task:${task.id}`,
+        howTo:
+          "Pay the recipient this amount in USDm on Celo Sepolia, then POST again to /approve with { payoutTxHash }.",
+      },
+      { status: 402 },
+    );
+  }
+
+  // Custodial mode (server pays directly).
+  if (serverPk && !payoutTxHash) {
+    if (
+      worker.address.toLowerCase() ===
+      "0x0000000000000000000000000000000000000000"
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Worker address is 0x0. Register a worker agent with a real onchain address.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const routerAccount = privateKeyToAccount(serverPk);
+    const routerAddress = routerAccount.address;
+
+    const [fromBefore, toBefore] = await Promise.all([
       erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: routerAddress }),
       erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: worker.address }),
     ]);
-  } catch {
-    // ignore: explorers will still show finality; UI can refresh later.
+
+    const hash = await erc20Transfer({
+      token: CELO_SEPOLIA_USDM,
+      fromPrivateKey: serverPk,
+      to: worker.address,
+      amount,
+    });
+
+    // Best-effort wait so the UI can show real post-tx balances.
+    let fromAfter: bigint | null = null;
+    let toAfter: bigint | null = null;
+    let receiptFound = false;
+    try {
+      const pc = makePublicClient();
+      await pc.waitForTransactionReceipt({
+        hash,
+        confirmations: 1,
+        timeout: 25_000,
+      });
+      receiptFound = true;
+      [fromAfter, toAfter] = await Promise.all([
+        erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: routerAddress }),
+        erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: worker.address }),
+      ]);
+    } catch {
+      // ignore: UI can refresh later
+    }
+
+    const updated = updateTask(id, {
+      status: "APPROVED",
+      payoutTxHash: hash,
+      payoutReceiptFound: receiptFound,
+      payoutFromAddress: routerAddress,
+      payoutFromBalanceBefore: fromBefore.toString(),
+      payoutFromBalanceAfter: (fromAfter ?? fromBefore).toString(),
+      payoutToBalanceBefore: toBefore.toString(),
+      payoutToBalanceAfter: (toAfter ?? toBefore).toString(),
+    });
+
+    return NextResponse.json({ ok: true, task: updated, payoutTxHash: hash });
   }
 
-  const updated = updateTask(id, {
-    status: "APPROVED",
-    payoutTxHash: hash,
-    payoutReceiptFound: receiptFound,
-    payoutFromAddress: routerAddress,
-    payoutFromBalanceBefore: fromBefore.toString(),
-    payoutFromBalanceAfter: (fromAfter ?? fromBefore).toString(),
-    payoutToBalanceBefore: toBefore.toString(),
-    payoutToBalanceAfter: (toAfter ?? toBefore).toString(),
-  });
+  // Open mode finalize: caller provides a tx hash; verify it paid the worker.
+  if (payoutTxHash) {
+    const verified = await verifyErc20Transfer({
+      txHash: payoutTxHash,
+      token: CELO_SEPOLIA_USDM,
+      to: worker.address,
+      minAmount: amount,
+    });
 
-  return NextResponse.json({ ok: true, task: updated, payoutTxHash: hash });
+    if (!verified.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Could not verify payout transfer in tx logs (wrong token/recipient/amount or not confirmed yet).",
+          payoutTxHash,
+        },
+        { status: 400 },
+      );
+    }
+
+    let toAfter: bigint | null = null;
+    try {
+      toAfter = await erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: worker.address });
+    } catch {
+      // ignore
+    }
+
+    const updated = updateTask(id, {
+      status: "APPROVED",
+      payoutTxHash,
+      payoutReceiptFound: true,
+      payoutFromAddress: verified.from as `0x${string}`,
+      payoutToBalanceAfter: toAfter ? toAfter.toString() : undefined,
+    });
+
+    return NextResponse.json({ ok: true, task: updated, payoutTxHash });
+  }
+
+  return NextResponse.json(
+    { ok: false, error: "Unexpected approve state" },
+    { status: 500 },
+  );
 }
