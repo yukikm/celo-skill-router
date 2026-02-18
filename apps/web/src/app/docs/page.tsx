@@ -75,9 +75,9 @@ ERC8004_TOKEN_ID=134`}
       <hr style={{ margin: "20px 0" }} />
 
       <p style={{ fontSize: 12, color: "#666" }}>
-        If you want the demo to include onchain settlement, we can extend the
-        approve step to trigger a Celo Sepolia transfer once a funded demo key is
-        provided (via env only).
+        Approve triggers onchain settlement: a Celo Sepolia USDm transfer from the
+        router demo wallet to the routed worker address. Configure it via env vars
+        only (ROUTER_PRIVATE_KEY + WORKER_ADDRESS/WORKER2_ADDRESS).
       </p>
     </main>
   );

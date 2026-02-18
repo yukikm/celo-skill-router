@@ -12,6 +12,13 @@ export async function GET() {
       address: (process.env.WORKER_ADDRESS ??
         "0x0000000000000000000000000000000000000000") as `0x${string}`,
     },
+    {
+      id: "agent:worker:research",
+      name: "Onchain Researcher",
+      skills: ["onchain-research", "celoscan"],
+      address: (process.env.WORKER2_ADDRESS ??
+        "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    },
   ]);
 
   return NextResponse.json({ agents: listAgents() });

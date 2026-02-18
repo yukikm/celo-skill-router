@@ -159,7 +159,8 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
       <p style={{ marginTop: 18, fontSize: 12, color: "#666" }}>
         Note: Approve triggers an on-chain USDm (Celo Sepolia) transfer from the
-        router agent wallet (ROUTER_PRIVATE_KEY) to the routed worker address.
+        router demo wallet (ROUTER_PRIVATE_KEY preferred; FUNDER_PRIVATE_KEY fallback)
+        to the routed worker address.
       </p>
     </main>
   );

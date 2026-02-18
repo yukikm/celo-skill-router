@@ -34,15 +34,27 @@ export async function POST(
     );
   }
 
-  const pk = process.env.ROUTER_PRIVATE_KEY as `0x${string}` | undefined;
+  const pk = (process.env.ROUTER_PRIVATE_KEY ??
+    process.env.FUNDER_PRIVATE_KEY) as `0x${string}` | undefined;
   if (!pk) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          "Missing ROUTER_PRIVATE_KEY env var (router agent wallet) to pay worker.",
+          "Missing ROUTER_PRIVATE_KEY (preferred) or FUNDER_PRIVATE_KEY env var (funded demo wallet) to pay worker.",
       },
       { status: 500 },
+    );
+  }
+
+  if (worker.address.toLowerCase() === "0x0000000000000000000000000000000000000000") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Worker address is not configured. Set WORKER_ADDRESS / WORKER2_ADDRESS env var(s) to real Celo Sepolia addresses.",
+      },
+      { status: 400 },
     );
   }
 
