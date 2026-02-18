@@ -1,40 +1,51 @@
 #!/usr/bin/env node
 
 /**
- * OpenClaw demo driver for Skill Router.
+ * OpenClaw Skill Router Demo Driver
  *
- * Env:
+ * Any agent can run this. The agent uses its own wallet to pay.
+ *
+ * Required env:
  * - SKILL_ROUTER_URL (default: http://localhost:3000)
- * - BUYER_AGENT_PRIVATE_KEY (0x...)   (required in non-custodial mode)
- * - WORKER_AGENT_ADDRESS (0x...)
+ * - AGENT_PRIVATE_KEY (0x...) — the agent's Celo Sepolia wallet (CELO + USDm)
+ *
+ * Optional env:
+ * - WORKER_AGENT_ADDRESS (0x...) — if not set, uses the agent's own address as worker
+ * - BUYER_AGENT_PRIVATE_KEY — legacy alias for AGENT_PRIVATE_KEY
  */
 
 import process from "node:process";
 
-const base = (process.env.SKILL_ROUTER_URL ?? "http://localhost:3000").replace(/\/$/, "");
-const buyerPk = process.env.BUYER_AGENT_PRIVATE_KEY;
-const workerAddr = process.env.WORKER_AGENT_ADDRESS;
+const base = (
+  process.env.SKILL_ROUTER_URL ?? "http://localhost:3000"
+).replace(/\/$/, "");
 
-if (!workerAddr) {
-  console.error("Missing WORKER_AGENT_ADDRESS");
+const agentPk =
+  process.env.AGENT_PRIVATE_KEY ?? process.env.BUYER_AGENT_PRIVATE_KEY;
+
+if (!agentPk) {
+  console.error(
+    "Missing AGENT_PRIVATE_KEY (or BUYER_AGENT_PRIVATE_KEY). " +
+      "Set it in OpenClaw secrets/env — this is the agent's Celo Sepolia wallet.",
+  );
   process.exit(1);
 }
 
-const buyerAgent = {
-  id: "agent:buyer:openclaw",
-  name: "Buyer Agent (OpenClaw)",
-  address: "0x0000000000000000000000000000000000000000", // not required by router today
-  skills: ["buy"],
-};
+// Derive agent address from private key.
+const { privateKeyToAccount } = await import("viem/accounts");
+const agentAccount = privateKeyToAccount(agentPk);
+const agentAddress = agentAccount.address;
 
-const workerAgent = {
-  id: "agent:worker:generic",
-  name: "Worker Agent (Generic)",
-  address: workerAddr,
-  skills: ["translate", "summarize", "onchain-research", "celoscan"],
-};
+const workerAddr =
+  process.env.WORKER_AGENT_ADDRESS ?? agentAddress; // fallback: pay self for demo
 
-async function j(method, path, body) {
+console.log(`Skill Router Demo`);
+console.log(`  URL:    ${base}`);
+console.log(`  Agent:  ${agentAddress}`);
+console.log(`  Worker: ${workerAddr}`);
+console.log();
+
+async function api(method, path, body) {
   const res = await fetch(`${base}${path}`, {
     method,
     headers: { "content-type": "application/json" },
@@ -47,72 +58,87 @@ async function j(method, path, body) {
   } catch {
     json = { raw: text };
   }
-  return { res, json };
+  return { status: res.status, json };
 }
 
-console.log(`Skill Router demo @ ${base}`);
+// 1) Register buyer agent
+console.log("1) Registering buyer agent...");
+await api("POST", "/api/agents/register", {
+  id: `agent:buyer:${agentAddress.slice(0, 10)}`,
+  name: "Buyer Agent",
+  address: agentAddress,
+  skills: ["buy"],
+});
 
-// Register agents
-await j("POST", "/api/agents/register", buyerAgent);
-await j("POST", "/api/agents/register", workerAgent);
+// 2) Register worker agent
+console.log("2) Registering worker agent...");
+await api("POST", "/api/agents/register", {
+  id: `agent:worker:${workerAddr.slice(0, 10)}`,
+  name: "Worker Agent",
+  address: workerAddr,
+  skills: ["translate", "summarize", "onchain-research", "celoscan"],
+});
 
-// Create task
-const { json: created } = await j("POST", "/api/tasks", {
-  title: "Translate pitch to PT-BR (agent-to-agent)",
+// 3) Create task
+console.log("3) Creating task...");
+const { json: created } = await api("POST", "/api/tasks", {
+  title: "Translate hackathon pitch to Portuguese",
   description:
-    "Translate this pitch to PT-BR:\n\nSkill Router is an agent-to-agent marketplace on Celo. Post a task → route → submit → approve → pay on-chain.",
+    "Translate this pitch to PT-BR:\n\nSkill Router is an agent-to-agent marketplace on Celo. Post a task → route to a verified specialist → approve → pay on-chain.",
   skill: "translate",
   budgetUsd: "1",
+  buyerAddress: agentAddress,
 });
 
 if (!created?.ok) {
-  console.error("Failed to create task", created);
+  console.error("Failed to create task:", created);
   process.exit(1);
 }
-
 const taskId = created.task.id;
-console.log(`Created task: ${taskId}`);
+console.log(`   Task: ${taskId}`);
 
-// Route
-await j("POST", `/api/tasks/${taskId}/route-to-agent`);
-console.log(`Routed task.`);
+// 4) Route
+console.log("4) Routing to worker...");
+const { json: routed } = await api(
+  "POST",
+  `/api/tasks/${taskId}/route-to-agent`,
+);
+console.log(`   Routed to: ${routed?.routedTo?.name ?? "unknown"}`);
 
-// Submit
-await j("POST", `/api/tasks/${taskId}/submit`, {
+// 5) Submit deliverable
+console.log("5) Submitting deliverable...");
+await api("POST", `/api/tasks/${taskId}/submit`, {
   deliverable:
-    "PT-BR: Skill Router é um marketplace de agente-para-agente no Celo. Publique uma tarefa → roteie para um especialista verificado → aprove → pague on-chain.",
+    "PT-BR: Skill Router é um marketplace de agente-para-agente no Celo. Publique uma tarefa → roteie → aprove → pague on-chain.",
 });
-console.log(`Submitted deliverable.`);
 
-// Approve: may return 402
-const attempt1 = await j("POST", `/api/tasks/${taskId}/approve`);
+// 6) Approve (expect 402 → pay → finalize)
+console.log("6) Approving (expecting 402 payment terms)...");
+const attempt = await api("POST", `/api/tasks/${taskId}/approve`);
 
-if (attempt1.res.status === 402) {
-  const terms = attempt1.json;
-  console.log("Payment required (402). Terms:", {
-    recipient: terms.recipient,
-    amountHuman: terms.amountHuman,
-    token: terms.token,
-    chainId: terms.chainId,
-  });
+if (attempt.status === 402) {
+  const terms = attempt.json;
+  console.log(`   Payment required:`);
+  console.log(`     Token:     ${terms.tokenSymbol} (${terms.token})`);
+  console.log(`     Amount:    ${terms.amountHuman} ${terms.tokenSymbol}`);
+  console.log(`     Recipient: ${terms.recipient}`);
+  console.log(`     Chain:     ${terms.chainId}`);
 
-  if (!buyerPk) {
-    console.error("Missing BUYER_AGENT_PRIVATE_KEY to settle 402 payment terms.");
-    process.exit(1);
-  }
-
-  // Lazy-import viem so local installs work.
+  // Pay from agent's wallet
+  console.log("   Signing payment from agent wallet...");
   const { createWalletClient, http, erc20Abi } = await import("viem");
-  const { privateKeyToAccount } = await import("viem/accounts");
 
-  const account = privateKeyToAccount(buyerPk);
   const client = createWalletClient({
-    account,
+    account: agentAccount,
     chain: {
       id: 11142220,
       name: "Celo Sepolia",
       nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },
-      rpcUrls: { default: { http: ["https://forno.celo-sepolia.celo-testnet.org"] } },
+      rpcUrls: {
+        default: {
+          http: ["https://forno.celo-sepolia.celo-testnet.org"],
+        },
+      },
     },
     transport: http("https://forno.celo-sepolia.celo-testnet.org"),
   });
@@ -122,18 +148,47 @@ if (attempt1.res.status === 402) {
     abi: erc20Abi,
     functionName: "transfer",
     args: [terms.recipient, BigInt(terms.amount)],
-    account,
+    account: agentAccount,
   });
 
-  console.log(`Paid onchain: ${txHash}`);
+  console.log(`   Paid: ${txHash}`);
+  console.log(
+    `   Celoscan: https://sepolia.celoscan.io/tx/${txHash}`,
+  );
 
-  const final = await j("POST", `/api/tasks/${taskId}/approve`, {
+  // Finalize approval with proof
+  console.log("   Finalizing approval with payoutTxHash...");
+  const final = await api("POST", `/api/tasks/${taskId}/approve`, {
     payoutTxHash: txHash,
   });
 
-  console.log("Approve finalized:", final.json.ok ? "OK" : final.json);
+  if (final.json?.ok) {
+    console.log(`   ✅ APPROVED`);
+  } else {
+    console.log(`   ⚠️  Finalize response:`, final.json);
+  }
+
+  console.log();
+  console.log(`=== RESULTS ===`);
+  console.log(`Task URL:  ${base}/tasks/${taskId}`);
+  console.log(`Tx Hash:   ${txHash}`);
+  console.log(`Celoscan:  https://sepolia.celoscan.io/tx/${txHash}`);
+  console.log(`Proof:     Paid 1 USDm to ${terms.recipient} — tx: https://sepolia.celoscan.io/tx/${txHash}`);
+} else if (attempt.json?.ok) {
+  // Server paid (custodial mode)
+  console.log(`   ✅ APPROVED (server-side payment)`);
+  console.log(`   Tx: ${attempt.json.payoutTxHash}`);
+  console.log();
+  console.log(`=== RESULTS ===`);
+  console.log(`Task URL:  ${base}/tasks/${taskId}`);
+  console.log(`Tx Hash:   ${attempt.json.payoutTxHash}`);
+  console.log(
+    `Celoscan:  https://sepolia.celoscan.io/tx/${attempt.json.payoutTxHash}`,
+  );
 } else {
-  console.log("Approve result:", attempt1.json.ok ? "OK" : attempt1.json);
+  console.error("Unexpected approve response:", attempt.json);
+  process.exit(1);
 }
 
-console.log(`Done. Open task UI: ${base}/tasks/${taskId}`);
+console.log();
+console.log("Done.");
