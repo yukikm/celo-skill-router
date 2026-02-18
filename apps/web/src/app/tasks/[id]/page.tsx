@@ -178,8 +178,14 @@ export default function TaskPage({ params }: { params: { id: string } }) {
         ? !!demo.workers?.worker1Configured
         : !!demo.workers?.worker2Configured;
 
+  const payoutAmountUsdM = Math.max(1, Number(task.budgetUsd || "1"));
+
+  const routerUsdmBal = demo?.router?.usdmBalance ? BigInt(demo.router.usdmBalance) : null;
+  const requiredPayoutWei = BigInt(payoutAmountUsdM) * 10n ** 18n;
+  const routerHasEnoughUsdm = routerUsdmBal === null ? true : routerUsdmBal >= requiredPayoutWei;
+
   const approveDisabled =
-    busy || task.status === "APPROVED" || !!task.payoutTxHash || !demoRouterReady;
+    busy || task.status === "APPROVED" || !!task.payoutTxHash || !demoRouterReady || !routerHasEnoughUsdm;
 
   const nextAction: null | { key: "route" | "submit" | "approve" | "refresh"; label: string; hint: string } =
     !task.workerAgentId
@@ -191,8 +197,6 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           : task.payoutReceiptFound
             ? null
             : { key: "refresh", label: "Refresh payout status", hint: "Checking finality — explorer + balances update once confirmed." };
-
-  const payoutAmountUsdM = Math.max(1, Number(task.budgetUsd || "1"));
 
   function ctaStyle(active: boolean) {
     return active
@@ -274,6 +278,12 @@ export default function TaskPage({ params }: { params: { id: string } }) {
               {demo.router?.usdmBalance ? (
                 <div style={{ marginTop: 4, color: "#555" }}>
                   router USDm balance: <b>{formatUnits(BigInt(demo.router.usdmBalance), 18)}</b>
+                </div>
+              ) : null}
+              {demo.router?.usdmBalance && !routerHasEnoughUsdm ? (
+                <div style={{ marginTop: 6, color: "#b00" }}>
+                  Not enough USDm to pay <b>{payoutAmountUsdM} USDm</b> for this task. Fund/mint USDm to the router wallet, then
+                  click <b>Refresh readiness</b>.
                 </div>
               ) : null}
               {!demoRouterReady ? (
@@ -496,9 +506,11 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           title={
             !demoRouterReady
               ? "Missing ROUTER_PRIVATE_KEY (or FUNDER_PRIVATE_KEY fallback) in env vars. Configure a funded test wallet to enable payouts."
-              : task.status === "APPROVED" || task.payoutTxHash
-                ? "This task was already approved (payout already initiated). Create a new task to run the demo again."
-                : undefined
+              : !routerHasEnoughUsdm
+                ? "Router USDm balance is too low for this payout. Mint/fund USDm and refresh readiness."
+                : task.status === "APPROVED" || task.payoutTxHash
+                  ? "This task was already approved (payout already initiated). Create a new task to run the demo again."
+                  : undefined
           }
         >
           Approve + pay
