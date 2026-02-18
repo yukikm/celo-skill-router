@@ -244,25 +244,50 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
   const isHighlight = (key: string) => nextAction?.key === key;
 
+  // Progress steps
+  const steps = [
+    { label: "Posted", done: true },
+    { label: "Claimed", done: !!task.workerAgentId },
+    { label: "Submitted", done: task.status === "SUBMITTED" || task.status === "APPROVED" },
+    { label: "Paid", done: task.status === "APPROVED" && !!task.payoutTxHash },
+  ];
+
   return (
-    <main style={{ maxWidth: 960, margin: "0 auto", padding: 24, fontFamily: "ui-sans-serif, system-ui" }}>
+    <main style={{ maxWidth: 960, margin: "0 auto", padding: 24, fontFamily: "ui-sans-serif, system-ui", color: "#f3f3f5", background: "#0b0b0d", minHeight: "100vh" }}>
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <Link href="/tasks">← Tasks</Link>
+        <Link href="/tasks" style={{ color: "#a1a1aa", textDecoration: "none" }}>← Tasks</Link>
         <h1 style={{ fontSize: 24, margin: 0 }}>{task.title}</h1>
       </div>
 
-      <div style={{ marginTop: 8, color: "#888", fontSize: 13 }}>
-        skill: <b>{task.skill}</b> • budget: <b>{task.budgetUsd} USDm</b> • status: <b>{task.status}</b>
+      <div style={{ marginTop: 8, color: "#a1a1aa", fontSize: 13 }}>
+        skill: <b style={{ color: "#d7d7dc" }}>{task.skill}</b> • budget: <b style={{ color: "#34d399" }}>{task.budgetUsd} USDm</b> • status: <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 700, background: task.status === "OPEN" ? "rgba(52,211,153,0.15)" : task.status === "APPROVED" ? "rgba(16,185,129,0.15)" : "rgba(251,191,36,0.15)", color: task.status === "OPEN" ? "#34d399" : task.status === "APPROVED" ? "#10b981" : "#fbbf24" }}>{task.status}</span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ marginTop: 16, display: "flex", gap: 0, alignItems: "center" }}>
+        {steps.map((s, i) => (
+          <div key={s.label} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 auto" }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, background: s.done ? "#34d399" : "rgba(255,255,255,0.08)", color: s.done ? "#0b0b0d" : "#71717a" }}>
+                {s.done ? "✓" : i + 1}
+              </div>
+              <div style={{ fontSize: 10, color: s.done ? "#34d399" : "#71717a", marginTop: 4 }}>{s.label}</div>
+            </div>
+            {i < steps.length - 1 && (
+              <div style={{ flex: 1, height: 2, background: steps[i + 1].done ? "#34d399" : "rgba(255,255,255,0.08)", margin: "0 4px", marginBottom: 16 }} />
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Guided next step */}
       {nextAction && (
-        <div style={{ marginTop: 14, padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.06)", fontSize: 13 }}>
-          <b>Next: {nextAction.label}</b> — {nextAction.hint}
+        <div style={{ marginTop: 14, padding: 12, borderRadius: 12, border: "1px solid rgba(52,211,153,0.15)", background: "rgba(52,211,153,0.05)", fontSize: 13, color: "#d7d7dc" }}>
+          <b style={{ color: "#34d399" }}>Next: {nextAction.label}</b> — {nextAction.hint}
         </div>
       )}
 
-      <pre style={{ marginTop: 14, whiteSpace: "pre-wrap", border: "1px solid #ddd", borderRadius: 12, padding: 12, fontSize: 13 }}>
+      <pre style={{ marginTop: 14, whiteSpace: "pre-wrap", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 12, fontSize: 13, background: "rgba(0,0,0,0.2)", color: "#d7d7dc" }}>
         {task.description}
       </pre>
 
@@ -317,14 +342,14 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
       {/* Worker info */}
       {task.workerAgentId && (
-        <div style={{ marginTop: 12, fontSize: 13 }}>
-          routed to: <b>{worker?.name ?? task.workerAgentId}</b>
+        <div style={{ marginTop: 12, fontSize: 13, padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          🤖 Worker: <b>{worker?.name ?? task.workerAgentId}</b>
           {worker?.address && (
-            <span> — <code>{shortHex(worker.address)}</code>
-              <button onClick={() => copy(worker.address)} style={{ fontSize: 11, marginLeft: 4 }}>
-                {copied === worker.address ? "Copied" : "Copy"}
+            <span> — <code style={{ color: "#a1a1aa" }}>{shortHex(worker.address)}</code>
+              <button onClick={() => copy(worker.address)} style={{ fontSize: 11, marginLeft: 4, background: "none", border: "none", color: "#34d399", cursor: "pointer" }}>
+                {copied === worker.address ? "✓" : "copy"}
               </button>
-              <a href={`${celoscanBase}/address/${worker.address}`} target="_blank" rel="noreferrer" style={{ marginLeft: 6 }}>Celoscan</a>
+              <a href={`${celoscanBase}/address/${worker.address}`} target="_blank" rel="noreferrer" style={{ marginLeft: 6, color: "#34d399", fontSize: 11 }}>Celoscan ↗</a>
             </span>
           )}
         </div>
@@ -332,27 +357,27 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
       {/* 402 Payment Terms (x402) */}
       {paymentTerms && (
-        <div style={{ marginTop: 16, padding: 16, borderRadius: 14, border: "2px solid #f59e0b", background: "#fffbeb" }}>
-          <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 8 }}>⚡ Payment Required (402)</div>
-          <div style={{ fontSize: 13, lineHeight: 1.7 }}>
-            <div>Token: <b>{paymentTerms.tokenSymbol}</b> (<code>{shortHex(paymentTerms.token)}</code>)</div>
-            <div>Amount: <b>{paymentTerms.amountHuman} {paymentTerms.tokenSymbol}</b></div>
-            <div>Recipient (worker): <code>{shortHex(paymentTerms.recipient)}</code></div>
+        <div style={{ marginTop: 16, padding: 16, borderRadius: 14, border: "2px solid #f59e0b", background: "rgba(245,158,11,0.08)" }}>
+          <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 8, color: "#f59e0b" }}>⚡ HTTP 402 — Payment Required</div>
+          <div style={{ fontSize: 13, lineHeight: 1.7, color: "#d7d7dc" }}>
+            <div>Token: <b>{paymentTerms.tokenSymbol}</b> (<code style={{ color: "#a1a1aa" }}>{shortHex(paymentTerms.token)}</code>)</div>
+            <div>Amount: <b style={{ color: "#34d399" }}>{paymentTerms.amountHuman} {paymentTerms.tokenSymbol}</b></div>
+            <div>Recipient (worker): <code style={{ color: "#a1a1aa" }}>{shortHex(paymentTerms.recipient)}</code></div>
             <div>Chain: Celo Sepolia ({paymentTerms.chainId})</div>
-            <div>Memo: <code>{paymentTerms.memo}</code></div>
+            <div>Memo: <code style={{ color: "#a1a1aa" }}>{paymentTerms.memo}</code></div>
           </div>
-          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             {!walletConnected ? (
-              <button onClick={connectWallet} style={{ padding: "10px 16px", borderRadius: 12, background: "#f59e0b", color: "#fff", fontWeight: 800, border: "none", cursor: "pointer" }}>
-                Connect Wallet (MiniPay / MetaMask)
+              <button onClick={connectWallet} style={{ padding: "12px 20px", borderRadius: 12, background: "#f59e0b", color: "#0b0b0d", fontWeight: 800, border: "none", cursor: "pointer", fontSize: 14 }}>
+                🔗 Connect Wallet (MiniPay / MetaMask)
               </button>
             ) : (
-              <button onClick={payFromWallet} disabled={payingFromWallet} style={{ padding: "10px 16px", borderRadius: 12, background: "#10b981", color: "#fff", fontWeight: 800, border: "none", cursor: payingFromWallet ? "not-allowed" : "pointer" }}>
-                {payingFromWallet ? "Signing…" : `Pay ${paymentTerms.amountHuman} ${paymentTerms.tokenSymbol}`}
+              <button onClick={payFromWallet} disabled={payingFromWallet} style={{ padding: "12px 20px", borderRadius: 12, background: "#34d399", color: "#0b0b0d", fontWeight: 800, border: "none", cursor: payingFromWallet ? "not-allowed" : "pointer", fontSize: 14 }}>
+                {payingFromWallet ? "Signing…" : `💸 Pay ${paymentTerms.amountHuman} ${paymentTerms.tokenSymbol}`}
               </button>
             )}
             {walletConnected && walletAddress && (
-              <span style={{ fontSize: 12, color: "#666", alignSelf: "center" }}>
+              <span style={{ fontSize: 12, color: "#a1a1aa" }}>
                 Connected: {shortHex(walletAddress)}
               </span>
             )}
@@ -379,11 +404,11 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           </div>
 
           {/* Payment summary */}
-          <div style={{ marginTop: 10, padding: 12, borderRadius: 12, border: "1px solid #e5e5e5", background: "#fafafa" }}>
-            <div style={{ fontWeight: 800, marginBottom: 4 }}>Payment summary</div>
-            <div>amount: <b>{payoutAmountUsdM} USDm</b></div>
-            {task.payoutFromAddress && <div>from: <code>{shortHex(task.payoutFromAddress)}</code></div>}
-            {worker?.address && <div>to (worker): <code>{shortHex(worker.address)}</code></div>}
+          <div style={{ marginTop: 10, padding: 12, borderRadius: 12, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.05)" }}>
+            <div style={{ fontWeight: 800, marginBottom: 4, color: "#34d399" }}>💰 Payment summary</div>
+            <div>amount: <b style={{ color: "#34d399" }}>{payoutAmountUsdM} USDm</b></div>
+            {task.payoutFromAddress && <div>from: <code style={{ color: "#a1a1aa" }}>{shortHex(task.payoutFromAddress)}</code></div>}
+            {worker?.address && <div>to (worker): <code style={{ color: "#a1a1aa" }}>{shortHex(worker.address)}</code></div>}
           </div>
 
           {/* Balances */}
@@ -399,11 +424,11 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           )}
 
           {/* Judge-ready proof */}
-          <div style={{ marginTop: 10, padding: 10, borderRadius: 12, border: "1px dashed rgba(0,0,0,0.15)", background: "rgba(0,0,0,0.03)" }}>
-            <div style={{ fontWeight: 800, marginBottom: 4 }}>Judge-ready proof</div>
-            <code style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{proofText}</code>
-            <button onClick={() => copy(proofText)} style={{ fontSize: 11, marginLeft: 8 }}>
-              {copied === proofText ? "Copied" : "Copy proof"}
+          <div style={{ marginTop: 10, padding: 12, borderRadius: 12, border: "1px dashed rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.03)" }}>
+            <div style={{ fontWeight: 800, marginBottom: 4, color: "#f3f3f5" }}>📋 Judge-ready proof</div>
+            <code style={{ whiteSpace: "pre-wrap", fontSize: 12, color: "#d7d7dc" }}>{proofText}</code>
+            <button onClick={() => copy(proofText)} style={{ fontSize: 11, marginLeft: 8, background: "none", border: "1px solid rgba(255,255,255,0.15)", color: "#34d399", borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>
+              {copied === proofText ? "✓ Copied" : "Copy proof"}
             </button>
           </div>
         </div>
@@ -423,45 +448,51 @@ export default function TaskPage({ params }: { params: { id: string } }) {
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Action buttons — only show relevant ones */}
       <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button
-          disabled={busy}
-          onClick={() => act("route-to-agent")}
-          style={{ padding: "10px 14px", borderRadius: 12, fontWeight: isHighlight("route") ? 800 : 400, background: isHighlight("route") ? "#111" : "#fff", color: isHighlight("route") ? "#fff" : "#111", border: "1px solid #ccc", cursor: busy ? "not-allowed" : "pointer" }}
-        >
-          Route to agent
-        </button>
-        <button
-          disabled={busy || (isHighlight("submit") && !submitOutput.trim())}
-          onClick={() => act("submit", { output: submitOutput.trim() || "Agent deliverable" })}
-          style={{ padding: "10px 14px", borderRadius: 12, fontWeight: isHighlight("submit") ? 800 : 400, background: isHighlight("submit") ? "#111" : "#fff", color: isHighlight("submit") ? "#fff" : "#111", border: "1px solid #ccc", cursor: busy ? "not-allowed" : "pointer" }}
-        >
-          Submit work
-        </button>
-        <button
-          disabled={busy || task.status === "APPROVED" || !!task.payoutTxHash}
-          onClick={() => act("approve")}
-          style={{ padding: "10px 14px", borderRadius: 12, fontWeight: isHighlight("approve") ? 800 : 400, background: isHighlight("approve") ? "#111" : "#fff", color: isHighlight("approve") ? "#fff" : "#111", border: "1px solid #ccc", cursor: (busy || task.status === "APPROVED") ? "not-allowed" : "pointer" }}
-        >
-          Approve + pay
-        </button>
-        {task.payoutTxHash && (
+        {task.status === "OPEN" && !task.workerAgentId && (
+          <button
+            disabled={busy}
+            onClick={() => act("route-to-agent")}
+            style={{ padding: "10px 18px", borderRadius: 12, fontWeight: 800, background: "#34d399", color: "#0b0b0d", border: "none", cursor: busy ? "not-allowed" : "pointer", fontSize: 14 }}
+          >
+            ⚡ Auto-route to best agent
+          </button>
+        )}
+        {task.workerAgentId && task.status !== "SUBMITTED" && task.status !== "APPROVED" && (
+          <button
+            disabled={busy || !submitOutput.trim()}
+            onClick={() => act("submit", { output: submitOutput.trim() })}
+            style={{ padding: "10px 18px", borderRadius: 12, fontWeight: 800, background: submitOutput.trim() ? "#34d399" : "rgba(255,255,255,0.1)", color: submitOutput.trim() ? "#0b0b0d" : "#71717a", border: "none", cursor: (busy || !submitOutput.trim()) ? "not-allowed" : "pointer", fontSize: 14 }}
+          >
+            📤 Submit work
+          </button>
+        )}
+        {task.status === "SUBMITTED" && !task.payoutTxHash && (
+          <button
+            disabled={busy}
+            onClick={() => act("approve")}
+            style={{ padding: "10px 18px", borderRadius: 12, fontWeight: 800, background: "#f59e0b", color: "#fff", border: "none", cursor: busy ? "not-allowed" : "pointer", fontSize: 14 }}
+          >
+            💳 Approve + Pay (x402)
+          </button>
+        )}
+        {task.payoutTxHash && !task.payoutReceiptFound && (
           <button
             disabled={busy || pollingPayout}
             onClick={() => refreshPayout()}
-            style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #ccc", cursor: (busy || pollingPayout) ? "not-allowed" : "pointer" }}
+            style={{ padding: "10px 18px", borderRadius: 12, fontWeight: 700, background: "rgba(255,255,255,0.08)", color: "#d7d7dc", border: "1px solid rgba(255,255,255,0.12)", cursor: (busy || pollingPayout) ? "not-allowed" : "pointer", fontSize: 13 }}
           >
-            {pollingPayout ? "Checking…" : "Refresh payout"}
+            {pollingPayout ? "Checking…" : "🔄 Refresh payout"}
           </button>
         )}
       </div>
 
-      {err && <pre style={{ marginTop: 12, color: "#b00", whiteSpace: "pre-wrap", fontSize: 13 }}>{err}</pre>}
+      {err && <pre style={{ marginTop: 12, color: "#f87171", whiteSpace: "pre-wrap", fontSize: 13, padding: 10, borderRadius: 8, background: "rgba(248,113,113,0.1)" }}>{err}</pre>}
 
-      <p style={{ marginTop: 20, fontSize: 11, color: "#999" }}>
-        Payment: agent pays from its own wallet via x402 (402 Payment Required).
-        No server-side private keys required.
+      <p style={{ marginTop: 20, fontSize: 11, color: "#71717a" }}>
+        Payment: agent pays from its own wallet via x402 (HTTP 402 Payment Required).
+        No server-side private keys required. Every payment is a real onchain USDm transfer.
       </p>
     </main>
   );
