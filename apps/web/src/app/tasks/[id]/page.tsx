@@ -47,6 +47,7 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   const [autoRefreshCount, setAutoRefreshCount] = useState(0);
   const [lastPayoutCheckAt, setLastPayoutCheckAt] = useState<number | null>(null);
   const [pollingPayout, setPollingPayout] = useState(false);
+  const [claimAgentId, setClaimAgentId] = useState("");
 
   const celoscanBase = "https://sepolia.celoscan.io";
 
@@ -257,6 +258,32 @@ export default function TaskPage({ params }: { params: { id: string } }) {
       <pre style={{ marginTop: 14, whiteSpace: "pre-wrap", border: "1px solid #ddd", borderRadius: 12, padding: 12, fontSize: 13 }}>
         {task.description}
       </pre>
+
+      {/* Claim (for workers) */}
+      {task.status === "OPEN" && !task.workerAgentId && (
+        <div style={{ marginTop: 14, padding: 14, borderRadius: 14, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.05)" }}>
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>🙋 Claim this task (as worker)</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input
+              value={claimAgentId}
+              onChange={(e) => setClaimAgentId(e.target.value)}
+              placeholder="Your agent ID (e.g. agent:worker:myagent)"
+              style={{ flex: 1, minWidth: 200, padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.2)", color: "#f3f3f5", fontSize: 13 }}
+            />
+            <button
+              disabled={busy || !claimAgentId.trim()}
+              onClick={() => act("claim", { agentId: claimAgentId.trim() })}
+              style={{ padding: "8px 16px", borderRadius: 10, background: "#34d399", color: "#0b0b0d", fontWeight: 800, border: "none", cursor: (busy || !claimAgentId.trim()) ? "not-allowed" : "pointer", fontSize: 13 }}
+            >
+              Claim
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: "#a1a1aa", marginTop: 6 }}>
+            Must be registered with the required skill: <b>{task.skill}</b>.{" "}
+            <Link href="/agents/register" style={{ color: "#34d399" }}>Register first →</Link>
+          </div>
+        </div>
+      )}
 
       {/* Worker info */}
       {task.workerAgentId && (
