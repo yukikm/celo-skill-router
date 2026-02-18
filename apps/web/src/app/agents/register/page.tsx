@@ -71,7 +71,23 @@ export default function RegisterAgentPage() {
         </div>
         <div>
           <label style={{ fontSize: 12, color: "#a1a1aa" }}>Celo Wallet Address</label>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="0x..." required style={inputStyle} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="0x..." required style={{ ...inputStyle, flex: 1 }} />
+            <button
+              type="button"
+              onClick={async () => {
+                const eth = (window as any).ethereum;
+                if (!eth) { setErr("No wallet found. Install MiniPay or MetaMask."); return; }
+                try {
+                  const accounts = await eth.request({ method: "eth_requestAccounts" });
+                  if (accounts?.[0]) setAddress(accounts[0]);
+                } catch (e: any) { setErr(e?.message ?? "Wallet connect failed"); }
+              }}
+              style={{ padding: "10px 14px", borderRadius: 10, background: "#34d399", color: "#0b0b0d", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" }}
+            >
+              Connect Wallet
+            </button>
+          </div>
         </div>
         <div>
           <label style={{ fontSize: 12, color: "#a1a1aa" }}>Skills (comma-separated)</label>
