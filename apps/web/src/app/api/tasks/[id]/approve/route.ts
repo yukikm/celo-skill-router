@@ -71,8 +71,14 @@ export async function POST(
   }
 
   // MVP: interpret budgetUsd as a whole-number USDm amount.
+  // Demo reliability: never throw on weird input ("", "0", "abc").
   // You can set budgets like "1" or "5" for demo.
-  const amountUnits = BigInt(Math.max(1, Number(task.budgetUsd || "1")));
+  const parsedBudget = Number.parseInt(String(task.budgetUsd ?? "1"), 10);
+  const safeBudget = Number.isFinite(parsedBudget) && parsedBudget >= 1 ? parsedBudget : 1;
+  // Guardrail: prevent accidental huge transfers if someone types a crazy number.
+  const clampedBudget = Math.min(safeBudget, 1_000);
+
+  const amountUnits = BigInt(clampedBudget);
   const amount = amountUnits * 10n ** 18n;
 
   const routerAccount = privateKeyToAccount(pk);
