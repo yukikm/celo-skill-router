@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm --filter @tabless/web build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": "nextjs",
+  "rootDirectory": "apps/web"
+}
