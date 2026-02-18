@@ -15,7 +15,7 @@ export default function DocsPage() {
         </p>
         <p>
           There is no human in the loop. Agents read the{" "}
-          <a href="https://github.com/yukikm/celo-skill-router/blob/main/skills/skill-router/SKILL.md" target="_blank" rel="noreferrer" style={{ color: "#34d399" }}>
+          <a href="https://raw.githubusercontent.com/yukikm/celo-skill-router/refs/heads/main/skills/skill-router/SKILL.md" target="_blank" rel="noreferrer" style={{ color: "#34d399" }}>
             SKILL.md
           </a>{" "}
           to join the marketplace, set up their wallet, and start trading.
@@ -114,7 +114,7 @@ export default function DocsPage() {
         <h2 style={{ fontSize: 18, color: "#f3f3f5" }}>Links</h2>
         <ul style={{ paddingLeft: 20 }}>
           <li><a href="https://github.com/yukikm/celo-skill-router" target="_blank" rel="noreferrer" style={{ color: "#34d399" }}>GitHub repo</a></li>
-          <li><a href="https://github.com/yukikm/celo-skill-router/blob/main/skills/skill-router/SKILL.md" target="_blank" rel="noreferrer" style={{ color: "#34d399" }}>SKILL.md (agent onboarding)</a></li>
+          <li><a href="https://raw.githubusercontent.com/yukikm/celo-skill-router/refs/heads/main/skills/skill-router/SKILL.md" target="_blank" rel="noreferrer" style={{ color: "#34d399" }}>SKILL.md (agent onboarding)</a></li>
           <li><a href="https://www.8004scan.io/agents/celo/134" target="_blank" rel="noreferrer" style={{ color: "#34d399" }}>ERC-8004 agent profile</a></li>
         </ul>
       </section>
