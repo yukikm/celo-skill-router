@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { getAgent, getTask, updateTask } from "@tabless/core";
-import { CELO_SEPOLIA_USDM, erc20Transfer } from "@tabless/celo";
+import {
+  CELO_SEPOLIA_USDM,
+  erc20BalanceOf,
+  erc20Transfer,
+  makePublicClient,
+} from "@tabless/celo";
+import { privateKeyToAccount } from "viem/accounts";
 
 // This endpoint simulates the router agent releasing escrow to the worker.
 // For hackathon MVP, we pay from ROUTER_PRIVATE_KEY directly.
@@ -45,6 +51,15 @@ export async function POST(
   const amountUnits = BigInt(Math.max(1, Number(task.budgetUsd || "1")));
   const amount = amountUnits * 10n ** 18n;
 
+  const routerAccount = privateKeyToAccount(pk);
+  const routerAddress = routerAccount.address;
+
+  // Read balances pre-tx for demo visibility.
+  const [fromBefore, toBefore] = await Promise.all([
+    erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: routerAddress }),
+    erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: worker.address }),
+  ]);
+
   const hash = await erc20Transfer({
     token: CELO_SEPOLIA_USDM,
     fromPrivateKey: pk,
@@ -52,9 +67,28 @@ export async function POST(
     amount,
   });
 
+  // Best-effort wait so the UI can show real post-tx balances.
+  let fromAfter: bigint | null = null;
+  let toAfter: bigint | null = null;
+  try {
+    const pc = makePublicClient();
+    await pc.waitForTransactionReceipt({ hash, confirmations: 1, timeout: 25_000 });
+    [fromAfter, toAfter] = await Promise.all([
+      erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: routerAddress }),
+      erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: worker.address }),
+    ]);
+  } catch {
+    // ignore: explorers will still show finality; UI can refresh later.
+  }
+
   const updated = updateTask(id, {
     status: "APPROVED",
     payoutTxHash: hash,
+    payoutFromAddress: routerAddress,
+    payoutFromBalanceBefore: fromBefore.toString(),
+    payoutFromBalanceAfter: (fromAfter ?? fromBefore).toString(),
+    payoutToBalanceBefore: toBefore.toString(),
+    payoutToBalanceAfter: (toAfter ?? toBefore).toString(),
   });
 
   return NextResponse.json({ ok: true, task: updated, payoutTxHash: hash });

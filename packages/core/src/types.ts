@@ -24,6 +24,14 @@ export type Task = {
   buyerAddress?: `0x${string}`;
   workerAgentId?: string;
   escrowAddress?: `0x${string}`;
+
+  // Onchain payout visibility (hackathon UX): keep strings to avoid bigint JSON issues.
   payoutTxHash?: `0x${string}`;
+  payoutFromAddress?: `0x${string}`;
+  payoutFromBalanceBefore?: string; // raw token units (wei)
+  payoutFromBalanceAfter?: string;
+  payoutToBalanceBefore?: string;
+  payoutToBalanceAfter?: string;
+
   createdAt: number;
 };

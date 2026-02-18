@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { formatUnits } from "viem";
 
 type Task = {
   id: string;
@@ -12,6 +13,12 @@ type Task = {
   status: string;
   workerAgentId?: string;
   payoutTxHash?: string;
+
+  payoutFromAddress?: string;
+  payoutFromBalanceBefore?: string;
+  payoutFromBalanceAfter?: string;
+  payoutToBalanceBefore?: string;
+  payoutToBalanceAfter?: string;
 };
 
 export default function TaskPage({ params }: { params: { id: string } }) {
@@ -90,7 +97,42 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
       {task.payoutTxHash ? (
         <div style={{ marginTop: 12, fontSize: 13 }}>
-          payout tx: <code>{task.payoutTxHash}</code>
+          <div>
+            payout tx: <code>{task.payoutTxHash}</code>
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <a
+              href={`https://sepolia.celoscan.io/tx/${task.payoutTxHash}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View on Celoscan
+            </a>
+          </div>
+        </div>
+      ) : null}
+
+      {task.payoutFromBalanceBefore && task.payoutFromBalanceAfter ? (
+        <div style={{ marginTop: 12, fontSize: 13, color: "#333" }}>
+          <div>
+            router balance (USDm):{" "}
+            <b>
+              {formatUnits(BigInt(task.payoutFromBalanceBefore), 18)} →{" "}
+              {formatUnits(BigInt(task.payoutFromBalanceAfter), 18)}
+            </b>
+            {task.payoutFromAddress ? (
+              <span style={{ color: "#666" }}> ({task.payoutFromAddress})</span>
+            ) : null}
+          </div>
+          {task.payoutToBalanceBefore && task.payoutToBalanceAfter ? (
+            <div style={{ marginTop: 4 }}>
+              worker balance (USDm):{" "}
+              <b>
+                {formatUnits(BigInt(task.payoutToBalanceBefore), 18)} →{" "}
+                {formatUnits(BigInt(task.payoutToBalanceAfter), 18)}
+              </b>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
