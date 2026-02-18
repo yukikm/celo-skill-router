@@ -14,7 +14,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: "ui-sans-serif, system-ui" }}>{children}</body>
+      <body style={{ fontFamily: "ui-sans-serif, system-ui", margin: 0 }}>{children}</body>
     </html>
   );
 }

@@ -1,10 +1,12 @@
 import Link from "next/link";
 
+import { AppShell } from "@/components/AppShell";
+import { getBaseUrl } from "@/lib/base-url";
+
 async function getTasks() {
-  const res = await fetch("http://localhost:3005/api/tasks", {
-    cache: "no-store",
-  });
-  if (!res.ok) return { tasks: [] };
+  const base = await getBaseUrl();
+  const res = await fetch(`${base}/api/tasks`, { cache: "no-store" });
+  if (!res.ok) return { tasks: [] as any[] };
   return res.json() as Promise<{ tasks: any[] }>;
 }
 
@@ -12,39 +14,58 @@ export default async function TasksPage() {
   const { tasks } = await getTasks();
 
   return (
-    <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <Link href="/">← Home</Link>
-        <h1 style={{ fontSize: 24 }}>Tasks</h1>
-        <div style={{ marginLeft: "auto" }}>
-          <Link href="/tasks/new">+ New task</Link>
+    <AppShell
+      title="Tasks"
+      subtitle="Browse tasks posted to the router. Route one to an agent, then submit + approve."
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ color: "#b7b7bf", fontSize: 13 }}>
+          {tasks.length} task(s)
         </div>
+        <Link
+          href="/tasks/new"
+          style={{
+            textDecoration: "none",
+            color: "#0b0b0d",
+            background: "#f3f3f5",
+            padding: "10px 12px",
+            borderRadius: 12,
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
+          + Create task
+        </Link>
       </div>
 
-      <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+      <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
         {tasks.length === 0 ? (
-          <div style={{ color: "#666" }}>No tasks yet.</div>
+          <div style={{ color: "#b7b7bf" }}>No tasks yet.</div>
         ) : (
           tasks.map((t) => (
             <Link
               key={t.id}
               href={`/tasks/${t.id}`}
               style={{
-                border: "1px solid #ddd",
-                borderRadius: 12,
-                padding: 12,
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 14,
+                padding: 14,
                 textDecoration: "none",
                 color: "inherit",
+                background: "rgba(0,0,0,0.15)",
               }}
             >
-              <div style={{ fontWeight: 600 }}>{t.title}</div>
-              <div style={{ fontSize: 13, color: "#555" }}>
-                skill: {t.skill} • budget: {t.budgetUsd} USDm • status: {t.status}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ fontWeight: 800 }}>{t.title}</div>
+                <div style={{ fontSize: 12, color: "#a1a1aa" }}>{t.status}</div>
+              </div>
+              <div style={{ fontSize: 13, color: "#c7c7cf", marginTop: 6 }}>
+                skill: <b>{t.skill}</b> • budget: <b>{t.budgetUsd} USDm</b>
               </div>
             </Link>
           ))
         )}
       </div>
-    </main>
+    </AppShell>
   );
 }

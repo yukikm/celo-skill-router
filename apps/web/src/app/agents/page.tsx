@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { AppShell } from "@/components/AppShell";
+import { getBaseUrl } from "@/lib/base-url";
 
 type Agent = {
   id: string;
@@ -8,16 +9,16 @@ type Agent = {
 };
 
 async function getAgents() {
-  const res = await fetch("http://localhost:3005/api/agents", {
-    cache: "no-store",
-  });
+  const base = await getBaseUrl();
+  const res = await fetch(`${base}/api/agents`, { cache: "no-store" });
   const json = (await res.json()) as { agents: Agent[] };
   return json.agents;
 }
 
 async function getSelfClaw(pubkey: string) {
+  const base = await getBaseUrl();
   const res = await fetch(
-    `http://localhost:3005/api/selfclaw/agent/${encodeURIComponent(pubkey)}`,
+    `${base}/api/selfclaw/agent/${encodeURIComponent(pubkey)}`,
     { cache: "no-store" },
   );
 
@@ -33,77 +34,72 @@ export default async function AgentsPage() {
   const agents = await getAgents();
   const pubkey = process.env.SELFCLAW_AGENT_PUBKEY_HEX;
   const selfclaw = pubkey ? await getSelfClaw(pubkey) : null;
+  const tokenId = process.env.ERC8004_TOKEN_ID ?? "134";
 
   return (
-    <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h1 style={{ fontSize: 28 }}>Agents</h1>
-        <Link href="/">Home</Link>
-      </div>
-
-      <p style={{ color: "#444" }}>
-        Demo agents registered in the router. SelfClaw verification is shown for
-        the main agent identity.
-      </p>
-
+    <AppShell
+      title="Agents"
+      subtitle="Verified identities + endpoints. The router can prefer verified agents for higher trust."
+    >
       <section
         style={{
-          marginTop: 16,
-          padding: 16,
-          border: "1px solid #ddd",
-          borderRadius: 12,
+          padding: 14,
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 14,
+          background: "rgba(0,0,0,0.15)",
         }}
       >
-        <div style={{ fontWeight: 600 }}>SelfClaw verification</div>
-        <div style={{ fontFamily: "ui-monospace", marginTop: 8, fontSize: 13 }}>
-          agentPublicKey: {pubkey ?? "(set SELFCLAW_AGENT_PUBKEY_HEX)"}
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>SelfClaw verification</div>
+        <div style={{ fontSize: 13, color: "#c7c7cf" }}>
+          agentPublicKey: <code>{pubkey ?? "(set SELFCLAW_AGENT_PUBKEY_HEX)"}</code>
         </div>
-        <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 13, color: "#c7c7cf", marginTop: 6 }}>
+          ERC-8004 agentId/tokenId: <b>{tokenId}</b>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 13 }}>
           Status:{" "}
           {selfclaw ? (
             selfclaw.verified ? (
-              <span style={{ color: "#0a7" }}>VERIFIED</span>
+              <span style={{ color: "#34d399", fontWeight: 800 }}>VERIFIED</span>
             ) : (
-              <span style={{ color: "#d70" }}>NOT VERIFIED</span>
+              <span style={{ color: "#fbbf24", fontWeight: 800 }}>NOT VERIFIED</span>
             )
           ) : (
-            <span style={{ color: "#999" }}>unknown</span>
+            <span style={{ color: "#a1a1aa" }}>unknown</span>
           )}
         </div>
-        {selfclaw?.humanId ? (
-          <div style={{ marginTop: 6, color: "#666", fontSize: 13 }}>
-            humanId: {selfclaw.humanId}
-          </div>
-        ) : null}
       </section>
 
-      <hr style={{ margin: "24px 0" }} />
+      <div style={{ height: 14 }} />
 
       <ul style={{ display: "grid", gap: 12, padding: 0, listStyle: "none" }}>
         {agents.map((a) => (
           <li
             key={a.id}
-            style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}
+            style={{
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 14,
+              padding: 14,
+              background: "rgba(0,0,0,0.15)",
+            }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
               <div>
-                <div style={{ fontWeight: 700 }}>{a.name}</div>
-                <div
-                  style={{ fontFamily: "ui-monospace", fontSize: 12, color: "#555" }}
-                >
+                <div style={{ fontWeight: 900 }}>{a.name}</div>
+                <div style={{ fontFamily: "ui-monospace", fontSize: 12, color: "#a1a1aa" }}>
                   {a.id}
                 </div>
               </div>
-              <div style={{ fontFamily: "ui-monospace", fontSize: 12 }}>
+              <div style={{ fontFamily: "ui-monospace", fontSize: 12, color: "#d7d7dc" }}>
                 {a.address}
               </div>
             </div>
-            <div style={{ marginTop: 10, fontSize: 13, color: "#444" }}>
-              Skills: {a.skills.join(", ")}
+            <div style={{ marginTop: 10, fontSize: 13, color: "#c7c7cf" }}>
+              Skills: <b>{a.skills.join(", ")}</b>
             </div>
           </li>
         ))}
       </ul>
-    </main>
+    </AppShell>
   );
 }
