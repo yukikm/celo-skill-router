@@ -56,6 +56,23 @@ export default function TaskPage({ params }: { params: { id: string } }) {
     }
   }
 
+  async function refreshPayout() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/tasks/${params.id}/refresh-payout`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok || data.ok === false) {
+        setErr(data.error ? JSON.stringify(data.error) : JSON.stringify(data));
+      }
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!task) {
     return (
       <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
@@ -137,7 +154,9 @@ export default function TaskPage({ params }: { params: { id: string } }) {
       ) : null}
 
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button disabled={busy} onClick={() => act("route-to-agent")}>Route to agent</button>
+        <button disabled={busy} onClick={() => act("route-to-agent")}>
+          Route to agent
+        </button>
         <button
           disabled={busy}
           onClick={() =>
@@ -149,8 +168,17 @@ export default function TaskPage({ params }: { params: { id: string } }) {
         >
           Submit work
         </button>
-        <button disabled={busy} onClick={() => act("approve")}>Approve + pay</button>
-        <button disabled={busy} onClick={refresh}>Refresh</button>
+        <button disabled={busy} onClick={() => act("approve")}>
+          Approve + pay
+        </button>
+        {task.payoutTxHash ? (
+          <button disabled={busy} onClick={refreshPayout}>
+            Refresh payout status
+          </button>
+        ) : null}
+        <button disabled={busy} onClick={refresh}>
+          Refresh
+        </button>
       </div>
 
       {err ? (
