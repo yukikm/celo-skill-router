@@ -26,6 +26,18 @@ export async function POST(
     );
   }
 
+  // Demo safety: prevent accidental double-pays if someone clicks twice or refreshes.
+  if (task.status === "APPROVED" || task.payoutTxHash) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Task already approved/payout already initiated for this task. Create a new task to run the demo again.",
+      },
+      { status: 400 },
+    );
+  }
+
   const worker = getAgent(task.workerAgentId);
   if (!worker) {
     return NextResponse.json(

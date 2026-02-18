@@ -214,7 +214,15 @@ export default function TaskPage({ params }: { params: { id: string } }) {
         >
           Submit work
         </button>
-        <button disabled={busy} onClick={() => act("approve")}>
+        <button
+          disabled={busy || task.status === "APPROVED" || !!task.payoutTxHash}
+          onClick={() => act("approve")}
+          title={
+            task.status === "APPROVED" || task.payoutTxHash
+              ? "This task was already approved (payout already initiated). Create a new task to run the demo again."
+              : undefined
+          }
+        >
           Approve + pay
         </button>
         {task.payoutTxHash ? (
