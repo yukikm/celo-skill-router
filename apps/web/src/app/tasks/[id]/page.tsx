@@ -163,6 +163,21 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   }
 
   const demoRouterReady = !!demo?.router?.configured;
+
+  const requiredWorkerEnv: null | { key: "WORKER_ADDRESS" | "WORKER2_ADDRESS"; label: string } =
+    task.skill === "translate" || task.skill === "summarize"
+      ? { key: "WORKER_ADDRESS", label: "Polyglot Worker" }
+      : task.skill === "onchain-research" || task.skill === "celoscan"
+        ? { key: "WORKER2_ADDRESS", label: "Onchain Researcher" }
+        : null;
+
+  const requiredWorkerReady =
+    !demo || !requiredWorkerEnv
+      ? true
+      : requiredWorkerEnv.key === "WORKER_ADDRESS"
+        ? !!demo.workers?.worker1Configured
+        : !!demo.workers?.worker2Configured;
+
   const approveDisabled =
     busy || task.status === "APPROVED" || !!task.payoutTxHash || !demoRouterReady;
 
@@ -218,6 +233,20 @@ export default function TaskPage({ params }: { params: { id: string } }) {
               <div style={{ marginTop: 4, color: demoRouterReady ? "#0a7" : "#a60" }}>
                 router wallet: <b>{demoRouterReady ? "configured" : "missing env var"}</b>
               </div>
+
+              <div style={{ marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ color: demo.workers?.worker1Configured ? "#0a7" : "#a60" }}>
+                  worker1 (WORKER_ADDRESS): <b>{demo.workers?.worker1Configured ? "configured" : "missing"}</b>
+                </span>
+                <span style={{ color: demo.workers?.worker2Configured ? "#0a7" : "#a60" }}>
+                  worker2 (WORKER2_ADDRESS): <b>{demo.workers?.worker2Configured ? "configured" : "missing"}</b>
+                </span>
+                {requiredWorkerEnv && !requiredWorkerReady ? (
+                  <span style={{ color: "#b00" }}>
+                    Required for this task: <b>{requiredWorkerEnv.label}</b>
+                  </span>
+                ) : null}
+              </div>
               {demo.router?.address ? (
                 <div style={{ marginTop: 4, color: "#555", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <span>
@@ -251,6 +280,13 @@ export default function TaskPage({ params }: { params: { id: string } }) {
                 <div style={{ marginTop: 6, color: "#555" }}>
                   Set <code>ROUTER_PRIVATE_KEY</code> (preferred) or <code>FUNDER_PRIVATE_KEY</code> in
                   Vercel env vars (funded test wallet only).
+                </div>
+              ) : null}
+
+              {requiredWorkerEnv && !requiredWorkerReady ? (
+                <div style={{ marginTop: 6, color: "#555" }}>
+                  This task needs <code>{requiredWorkerEnv.key}</code> set in Vercel env vars so the demo can route + pay a real
+                  worker address.
                 </div>
               ) : null}
             </div>
@@ -420,9 +456,19 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button
-          disabled={busy}
+          disabled={busy || !requiredWorkerReady}
           onClick={() => act("route-to-agent")}
-          style={{ padding: "10px 12px", borderRadius: 12, cursor: "pointer", ...ctaStyle(nextAction?.key === "route") }}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            cursor: busy || !requiredWorkerReady ? "not-allowed" : "pointer",
+            ...ctaStyle(nextAction?.key === "route"),
+          }}
+          title={
+            !requiredWorkerReady && requiredWorkerEnv
+              ? `Missing ${requiredWorkerEnv.key} env var. Configure it in Vercel so routing selects a worker with a real onchain address.`
+              : undefined
+          }
         >
           Route to agent
         </button>
