@@ -6,5 +6,8 @@
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "puppeteer": "^24.37.3"
   }
 }
