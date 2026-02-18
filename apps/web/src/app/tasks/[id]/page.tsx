@@ -30,14 +30,31 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   const [err, setErr] = useState<string | null>(null);
   const [autoRefreshCount, setAutoRefreshCount] = useState(0);
 
+  const [demo, setDemo] = useState<{
+    router?: { configured: boolean; address?: string; usdmBalance?: string | null };
+    workers?: { worker1Configured: boolean; worker2Configured: boolean };
+    celoscanBaseUrl?: string;
+  } | null>(null);
+
   async function refresh() {
     const res = await fetch(`/api/tasks/${params.id}`, { cache: "no-store" });
     const data = await res.json();
     setTask(data.task);
   }
 
+  async function refreshDemoStatus() {
+    try {
+      const res = await fetch(`/api/demo-status`, { cache: "no-store" });
+      const data = await res.json();
+      if (res.ok && data?.ok) setDemo(data);
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     refresh();
+    refreshDemoStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -74,7 +91,8 @@ export default function TaskPage({ params }: { params: { id: string } }) {
       });
       const data = await res.json();
       if (!res.ok || data.ok === false) {
-        setErr(data.error ? JSON.stringify(data.error) : JSON.stringify(data));
+        const msg = typeof data?.error === "string" ? data.error : JSON.stringify(data?.error ?? data);
+        setErr(msg);
       }
       await refresh();
     } finally {
@@ -95,7 +113,8 @@ export default function TaskPage({ params }: { params: { id: string } }) {
       if (!res.ok || data.ok === false) {
         // During background polling we avoid spamming the UI with transient errors.
         if (!silent) {
-          setErr(data.error ? JSON.stringify(data.error) : JSON.stringify(data));
+          const msg = typeof data?.error === "string" ? data.error : JSON.stringify(data?.error ?? data);
+          setErr(msg);
         }
       }
       setLastPayoutCheckAt(Date.now());
@@ -115,12 +134,65 @@ export default function TaskPage({ params }: { params: { id: string } }) {
     );
   }
 
+  const demoRouterReady = !!demo?.router?.configured;
+  const approveDisabled =
+    busy || task.status === "APPROVED" || !!task.payoutTxHash || !demoRouterReady;
+
   return (
     <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
         <Link href="/tasks">← Tasks</Link>
         <h1 style={{ fontSize: 24 }}>{task.title}</h1>
       </div>
+
+      {demo ? (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #ddd",
+            background: demoRouterReady ? "#f6fffb" : "#fff8f1",
+            fontSize: 13,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <b>Demo readiness</b>
+              <div style={{ marginTop: 4, color: demoRouterReady ? "#0a7" : "#a60" }}>
+                router wallet: <b>{demoRouterReady ? "configured" : "missing env var"}</b>
+              </div>
+              {demo.router?.address ? (
+                <div style={{ marginTop: 4, color: "#555" }}>
+                  router address: <code>{demo.router.address}</code>{" "}
+                  <a
+                    href={`${demo.celoscanBaseUrl}/address/${demo.router.address}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ marginLeft: 8 }}
+                  >
+                    View on Celoscan
+                  </a>
+                </div>
+              ) : null}
+              {demo.router?.usdmBalance ? (
+                <div style={{ marginTop: 4, color: "#555" }}>
+                  router USDm balance: <b>{formatUnits(BigInt(demo.router.usdmBalance), 18)}</b>
+                </div>
+              ) : null}
+              {!demoRouterReady ? (
+                <div style={{ marginTop: 6, color: "#555" }}>
+                  Set <code>ROUTER_PRIVATE_KEY</code> (preferred) or <code>FUNDER_PRIVATE_KEY</code> in
+                  Vercel env vars (funded test wallet only).
+                </div>
+              ) : null}
+            </div>
+            <button disabled={busy} onClick={refreshDemoStatus}>
+              Refresh readiness
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div style={{ marginTop: 12, color: "#555", fontSize: 13 }}>
         skill: <b>{task.skill}</b> • budget: <b>{task.budgetUsd} USDm</b> • status:{" "}
@@ -215,12 +287,14 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           Submit work
         </button>
         <button
-          disabled={busy || task.status === "APPROVED" || !!task.payoutTxHash}
+          disabled={approveDisabled}
           onClick={() => act("approve")}
           title={
-            task.status === "APPROVED" || task.payoutTxHash
-              ? "This task was already approved (payout already initiated). Create a new task to run the demo again."
-              : undefined
+            !demoRouterReady
+              ? "Missing ROUTER_PRIVATE_KEY (or FUNDER_PRIVATE_KEY fallback) in env vars. Configure a funded test wallet to enable payouts."
+              : task.status === "APPROVED" || task.payoutTxHash
+                ? "This task was already approved (payout already initiated). Create a new task to run the demo again."
+                : undefined
           }
         >
           Approve + pay
