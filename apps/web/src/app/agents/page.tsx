@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { getBaseUrl } from "@/lib/base-url";
 
@@ -39,7 +40,7 @@ export default async function AgentsPage() {
   return (
     <AppShell
       title="Agents"
-      subtitle="Verified identities + endpoints. The router can prefer verified agents for higher trust."
+      subtitle="Registered agents on the marketplace. Any agent can join by reading SKILL.md."
     >
       <section
         style={{
@@ -69,6 +70,23 @@ export default async function AgentsPage() {
           )}
         </div>
       </section>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+        <Link
+          href="/agents/register"
+          style={{
+            textDecoration: "none",
+            color: "#0b0b0d",
+            background: "#f3f3f5",
+            padding: "10px 14px",
+            borderRadius: 12,
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
+          + Register Agent
+        </Link>
+      </div>
 
       <div style={{ height: 14 }} />
 
