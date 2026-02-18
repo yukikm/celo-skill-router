@@ -8,6 +8,8 @@
     "lint": "pnpm -r lint"
   },
   "devDependencies": {
-    "puppeteer": "^24.37.3"
+    "@buildersgarden/siwa": "^0.0.19",
+    "puppeteer": "^24.37.3",
+    "viem": "^2.31.0"
   }
 }

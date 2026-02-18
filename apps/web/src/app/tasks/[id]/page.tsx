@@ -48,6 +48,7 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   const [lastPayoutCheckAt, setLastPayoutCheckAt] = useState<number | null>(null);
   const [pollingPayout, setPollingPayout] = useState(false);
   const [claimAgentId, setClaimAgentId] = useState("");
+  const [submitOutput, setSubmitOutput] = useState("");
 
   const celoscanBase = "https://sepolia.celoscan.io";
 
@@ -379,6 +380,20 @@ export default function TaskPage({ params }: { params: { id: string } }) {
         </div>
       )}
 
+      {/* Submit work input */}
+      {task.workerAgentId && task.status !== "SUBMITTED" && task.status !== "APPROVED" && (
+        <div style={{ marginTop: 14, padding: 14, borderRadius: 14, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.05)" }}>
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>📝 Submit deliverable</div>
+          <textarea
+            value={submitOutput}
+            onChange={(e) => setSubmitOutput(e.target.value)}
+            placeholder="Paste your work output here… (required)"
+            rows={4}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.2)", color: "#f3f3f5", fontSize: 13, resize: "vertical" }}
+          />
+        </div>
+      )}
+
       {/* Action buttons */}
       <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button
@@ -389,8 +404,8 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           Route to agent
         </button>
         <button
-          disabled={busy}
-          onClick={() => act("submit", { output: "Demo deliverable: agent output goes here." })}
+          disabled={busy || (isHighlight("submit") && !submitOutput.trim())}
+          onClick={() => act("submit", { output: submitOutput.trim() || "Agent deliverable" })}
           style={{ padding: "10px 14px", borderRadius: 12, fontWeight: isHighlight("submit") ? 800 : 400, background: isHighlight("submit") ? "#111" : "#fff", color: isHighlight("submit") ? "#fff" : "#111", border: "1px solid #ccc", cursor: busy ? "not-allowed" : "pointer" }}
         >
           Submit work
