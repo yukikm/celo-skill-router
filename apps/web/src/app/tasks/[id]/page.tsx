@@ -29,12 +29,31 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   const [lastPayoutCheckAt, setLastPayoutCheckAt] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [autoRefreshCount, setAutoRefreshCount] = useState(0);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const [demo, setDemo] = useState<{
     router?: { configured: boolean; address?: string; usdmBalance?: string | null };
     workers?: { worker1Configured: boolean; worker2Configured: boolean };
     celoscanBaseUrl?: string;
   } | null>(null);
+
+  function shortHex(hex: string, opts?: { head?: number; tail?: number }) {
+    const head = opts?.head ?? 6;
+    const tail = opts?.tail ?? 4;
+    if (!hex) return hex;
+    if (hex.length <= head + tail + 2) return hex;
+    return `${hex.slice(0, head + 2)}…${hex.slice(-tail)}`;
+  }
+
+  async function copy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(text);
+      setTimeout(() => setCopied((prev) => (prev === text ? null : prev)), 1200);
+    } catch {
+      // ignore
+    }
+  }
 
   async function refresh() {
     const res = await fetch(`/api/tasks/${params.id}`, { cache: "no-store" });
@@ -163,13 +182,24 @@ export default function TaskPage({ params }: { params: { id: string } }) {
                 router wallet: <b>{demoRouterReady ? "configured" : "missing env var"}</b>
               </div>
               {demo.router?.address ? (
-                <div style={{ marginTop: 4, color: "#555" }}>
-                  router address: <code>{demo.router.address}</code>{" "}
+                <div style={{ marginTop: 4, color: "#555", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <span>
+                    router address:{" "}
+                    <code title={demo.router.address}>{shortHex(demo.router.address)}</code>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copy(demo.router!.address!)}
+                    disabled={busy}
+                    style={{ fontSize: 12, padding: "4px 8px" }}
+                    title="Copy address"
+                  >
+                    {copied === demo.router.address ? "Copied" : "Copy"}
+                  </button>
                   <a
                     href={`${demo.celoscanBaseUrl}/address/${demo.router.address}`}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ marginLeft: 8 }}
                   >
                     View on Celoscan
                   </a>
@@ -219,8 +249,20 @@ export default function TaskPage({ params }: { params: { id: string } }) {
 
       {task.payoutTxHash ? (
         <div style={{ marginTop: 12, fontSize: 13 }}>
-          <div>
-            payout tx: <code>{task.payoutTxHash}</code>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <span>
+              payout tx:{" "}
+              <code title={task.payoutTxHash}>{shortHex(task.payoutTxHash)}</code>
+            </span>
+            <button
+              type="button"
+              onClick={() => copy(task.payoutTxHash!)}
+              disabled={busy}
+              style={{ fontSize: 12, padding: "4px 8px" }}
+              title="Copy tx hash"
+            >
+              {copied === task.payoutTxHash ? "Copied" : "Copy"}
+            </button>
           </div>
           <div style={{ marginTop: 4, color: task.payoutReceiptFound ? "#0a7" : "#a60" }}>
             status: <b>{task.payoutReceiptFound ? "confirmed" : "pending"}</b>
@@ -237,7 +279,7 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           </div>
           <div style={{ marginTop: 6 }}>
             <a
-              href={`https://sepolia.celoscan.io/tx/${task.payoutTxHash}`}
+              href={`${demo?.celoscanBaseUrl ?? "https://sepolia.celoscan.io"}/tx/${task.payoutTxHash}`}
               target="_blank"
               rel="noreferrer"
             >
