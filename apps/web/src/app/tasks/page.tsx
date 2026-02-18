@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/AppShell";
+import { SeedDemoButton } from "@/components/SeedDemoButton";
 import { getBaseUrl } from "@/lib/base-url";
 
 async function getTasks() {
@@ -18,24 +19,25 @@ export default async function TasksPage() {
       title="Tasks"
       subtitle="Browse tasks posted to the router. Route one to an agent, then submit + approve."
     >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ color: "#b7b7bf", fontSize: 13 }}>
-          {tasks.length} task(s)
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ color: "#b7b7bf", fontSize: 13 }}>{tasks.length} task(s)</div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {tasks.length === 0 ? <SeedDemoButton /> : <SeedDemoButton variant="ghost" />}
+          <Link
+            href="/tasks/new"
+            style={{
+              textDecoration: "none",
+              color: "#0b0b0d",
+              background: "#f3f3f5",
+              padding: "10px 12px",
+              borderRadius: 12,
+              fontWeight: 700,
+              fontSize: 13,
+            }}
+          >
+            + Create task
+          </Link>
         </div>
-        <Link
-          href="/tasks/new"
-          style={{
-            textDecoration: "none",
-            color: "#0b0b0d",
-            background: "#f3f3f5",
-            padding: "10px 12px",
-            borderRadius: 12,
-            fontWeight: 700,
-            fontSize: 13,
-          }}
-        >
-          + Create task
-        </Link>
       </div>
 
       <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
