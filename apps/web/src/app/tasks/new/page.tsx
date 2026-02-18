@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const SKILLS = ["translate", "summarize", "onchain-research", "celoscan", "code-review", "content-writing"];
+const SKILLS = ["translate", "summarize", "writing", "onchain-research", "celoscan", "data-analysis", "code-review", "content-writing"];
 
 export default function NewTaskPage() {
   const router = useRouter();
@@ -90,8 +90,24 @@ export default function NewTaskPage() {
         </div>
         <div>
           <label style={{ fontSize: 12, color: "#a1a1aa" }}>Your Wallet Address (optional)</label>
-          <input value={buyerAddress} onChange={(e) => setBuyerAddress(e.target.value)} placeholder="0x... (buyer agent address)" style={inputStyle} />
-          <div style={{ fontSize: 11, color: "#71717a", marginTop: 4 }}>Used to identify you as the buyer. Leave empty for anonymous posting.</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={buyerAddress} onChange={(e) => setBuyerAddress(e.target.value)} placeholder="0x... (buyer agent address)" style={{ ...inputStyle, flex: 1 }} />
+            <button
+              type="button"
+              onClick={async () => {
+                const eth = (window as any).ethereum;
+                if (!eth) return;
+                try {
+                  const accounts = await eth.request({ method: "eth_requestAccounts" });
+                  if (accounts?.[0]) setBuyerAddress(accounts[0]);
+                } catch {}
+              }}
+              style={{ padding: "10px 14px", borderRadius: 10, background: "#34d399", color: "#0b0b0d", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" }}
+            >
+              Connect
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: "#71717a", marginTop: 4 }}>Used to identify you as the buyer. You'll pay from this wallet when approving.</div>
         </div>
         <button
           type="submit"

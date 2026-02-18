@@ -1,23 +1,34 @@
 import { NextResponse } from "next/server";
 
-import { createTask, listTasks, seedAgents } from "@tabless/core";
+import { createTask, listAgents, listTasks, seedAgents } from "@tabless/core";
 
 const seeded = { value: false };
 
-export async function POST() {
-  if (!seeded.value) {
+export async function POST(req: Request) {
+  // Accept optional wallet address to create a personalized worker
+  const body = await req.json().catch(() => ({}));
+  const userAddress = (body?.address as string) || "";
+
+  if (!seeded.value || listAgents().length === 0) {
+    const workerAddr = (userAddress || "0xEE8b59794Ee3A6aeeCE9aa09a118bB6ba1029e3c") as `0x${string}`;
     seedAgents([
       {
         id: "agent:worker:translator",
         name: "Polyglot Worker",
-        skills: ["translate", "summarize"],
-        address: "0x0000000000000000000000000000000000000000",
+        skills: ["translate", "summarize", "writing"],
+        address: workerAddr,
       },
       {
         id: "agent:worker:research",
         name: "Onchain Researcher",
-        skills: ["onchain-research", "celoscan"],
-        address: "0x0000000000000000000000000000000000000000",
+        skills: ["onchain-research", "celoscan", "data-analysis"],
+        address: workerAddr,
+      },
+      {
+        id: "agent:buyer:0xopenclaw",
+        name: "0xOpenClaw (Buyer)",
+        skills: ["task-posting", "agent-coordination"],
+        address: workerAddr,
       },
     ]);
 
@@ -29,7 +40,7 @@ export async function POST() {
         description:
           "Translate this 45-second pitch into PT-BR and keep it punchy:\n\nSkill Router is an agent-to-agent marketplace on Celo. Post a task → route to a verified specialist → approve → pay on-chain. No invoices, no screenshots — just a transaction + receipts.",
         skill: "translate",
-        budgetUsd: "2",
+        budgetUsd: "1",
         status: "OPEN",
       });
 
@@ -47,5 +58,5 @@ export async function POST() {
     seeded.value = true;
   }
 
-  return NextResponse.json({ ok: true, tasks: listTasks().length });
+  return NextResponse.json({ ok: true, tasks: listTasks().length, agents: listAgents().length });
 }

@@ -67,15 +67,22 @@ export default function HomePage() {
           </div>
         </Link>
 
+        <Link href="/getting-started" style={cardStyle}>
+          <div style={{ fontWeight: 900 }}>Getting Started</div>
+          <div style={descStyle}>
+            Set up your wallet, get testnet USDm, and try the full flow in 2 minutes.
+          </div>
+        </Link>
+
         <a
-          href="https://github.com/yukikm/celo-skill-router/blob/main/skills/skill-router/SKILL.md"
+          href="https://raw.githubusercontent.com/yukikm/celo-skill-router/refs/heads/main/skills/skill-router/SKILL.md"
           target="_blank"
           rel="noreferrer"
           style={cardStyle}
         >
           <div style={{ fontWeight: 900 }}>SKILL.md ↗</div>
           <div style={descStyle}>
-            The onboarding doc for OpenClaw agents. Read this to join and start trading tasks.
+            The onboarding doc for AI agents. Read this to join programmatically.
           </div>
         </a>
       </div>
