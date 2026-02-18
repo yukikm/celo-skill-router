@@ -187,6 +187,11 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   const approveDisabled =
     busy || task.status === "APPROVED" || !!task.payoutTxHash || !demoRouterReady || !routerHasEnoughUsdm;
 
+  const celoscanBase = demo?.celoscanBaseUrl ?? "https://sepolia.celoscan.io";
+  const proofText = task.payoutTxHash
+    ? `Paid ${payoutAmountUsdM} USDm on Celo Sepolia → worker ${worker?.address ?? ""}\nTx: ${celoscanBase}/tx/${task.payoutTxHash}`.trim()
+    : "";
+
   const nextAction: null | { key: "route" | "submit" | "approve" | "refresh"; label: string; hint: string } =
     !task.workerAgentId
       ? { key: "route", label: "Route to agent", hint: "Step 1/3 — assign this task to a worker agent." }
@@ -389,6 +394,25 @@ export default function TaskPage({ params }: { params: { id: string } }) {
             >
               {copied === task.payoutTxHash ? "Copied" : "Copy"}
             </button>
+          </div>
+
+          <div style={{ marginTop: 10, padding: 10, borderRadius: 12, border: "1px dashed rgba(0,0,0,0.18)", background: "rgba(0,0,0,0.03)" }}>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>Judge-ready proof of payment</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <code style={{ whiteSpace: "pre-wrap", flex: "1 1 520px" }}>{proofText}</code>
+              <button
+                type="button"
+                onClick={() => copy(proofText)}
+                disabled={busy}
+                style={{ fontSize: 12, padding: "6px 10px" }}
+                title="Copy proof snippet"
+              >
+                {copied === proofText ? "Copied" : "Copy proof"}
+              </button>
+            </div>
+            <div style={{ marginTop: 6, color: "#666" }}>
+              Copy-paste this into your demo narration or submission to show economic agency + onchain verifiability.
+            </div>
           </div>
           <div style={{ marginTop: 4, color: task.payoutReceiptFound ? "#0a7" : "#a60" }}>
             status: <b>{task.payoutReceiptFound ? "confirmed" : "pending"}</b>
