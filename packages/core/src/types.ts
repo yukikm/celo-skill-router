@@ -27,6 +27,7 @@ export type Task = {
 
   // Onchain payout visibility (hackathon UX): keep strings to avoid bigint JSON issues.
   payoutTxHash?: `0x${string}`;
+  payoutReceiptFound?: boolean; // best-effort confirmation flag for UI
   payoutFromAddress?: `0x${string}`;
   payoutFromBalanceBefore?: string; // raw token units (wei)
   payoutFromBalanceAfter?: string;

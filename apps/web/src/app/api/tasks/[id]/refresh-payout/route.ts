@@ -63,6 +63,7 @@ export async function POST(
   ]);
 
   const updated = updateTask(id, {
+    payoutReceiptFound: receiptFound,
     payoutFromBalanceAfter: fromNow.toString(),
     payoutToBalanceAfter: toNow.toString(),
   });

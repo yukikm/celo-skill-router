@@ -82,9 +82,11 @@ export async function POST(
   // Best-effort wait so the UI can show real post-tx balances.
   let fromAfter: bigint | null = null;
   let toAfter: bigint | null = null;
+  let receiptFound = false;
   try {
     const pc = makePublicClient();
     await pc.waitForTransactionReceipt({ hash, confirmations: 1, timeout: 25_000 });
+    receiptFound = true;
     [fromAfter, toAfter] = await Promise.all([
       erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: routerAddress }),
       erc20BalanceOf({ token: CELO_SEPOLIA_USDM, owner: worker.address }),
@@ -96,6 +98,7 @@ export async function POST(
   const updated = updateTask(id, {
     status: "APPROVED",
     payoutTxHash: hash,
+    payoutReceiptFound: receiptFound,
     payoutFromAddress: routerAddress,
     payoutFromBalanceBefore: fromBefore.toString(),
     payoutFromBalanceAfter: (fromAfter ?? fromBefore).toString(),

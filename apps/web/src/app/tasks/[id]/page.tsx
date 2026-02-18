@@ -13,6 +13,7 @@ type Task = {
   status: string;
   workerAgentId?: string;
   payoutTxHash?: string;
+  payoutReceiptFound?: boolean;
 
   payoutFromAddress?: string;
   payoutFromBalanceBefore?: string;
@@ -25,6 +26,7 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   const [task, setTask] = useState<Task | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [autoRefreshCount, setAutoRefreshCount] = useState(0);
 
   async function refresh() {
     const res = await fetch(`/api/tasks/${params.id}`, { cache: "no-store" });
@@ -36,6 +38,28 @@ export default function TaskPage({ params }: { params: { id: string } }) {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // new tx hash => restart polling attempts
+    setAutoRefreshCount(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.payoutTxHash]);
+
+  // If a payout tx exists but isn't confirmed yet, poll a few times so the demo
+  // doesn't require manual clicking.
+  useEffect(() => {
+    if (!task?.payoutTxHash) return;
+    if (task.payoutReceiptFound) return;
+    if (autoRefreshCount >= 8) return;
+
+    const t = setTimeout(async () => {
+      await refreshPayout();
+      setAutoRefreshCount((c) => c + 1);
+    }, 6000);
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.payoutTxHash, task?.payoutReceiptFound, autoRefreshCount]);
 
   async function act(path: string, body?: any) {
     setBusy(true);
@@ -116,6 +140,14 @@ export default function TaskPage({ params }: { params: { id: string } }) {
         <div style={{ marginTop: 12, fontSize: 13 }}>
           <div>
             payout tx: <code>{task.payoutTxHash}</code>
+          </div>
+          <div style={{ marginTop: 4, color: task.payoutReceiptFound ? "#0a7" : "#a60" }}>
+            status: <b>{task.payoutReceiptFound ? "confirmed" : "pending"}</b>
+            {!task.payoutReceiptFound ? (
+              <span style={{ color: "#666" }}>
+                {" "}(auto-refreshing…)
+              </span>
+            ) : null}
           </div>
           <div style={{ marginTop: 6 }}>
             <a
