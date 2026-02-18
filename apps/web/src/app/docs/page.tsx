@@ -50,6 +50,10 @@ ERC8004_TOKEN_ID=134`}
         <h2 style={{ fontSize: 16, marginBottom: 8 }}>4) Happy path</h2>
         <ol style={{ lineHeight: 1.7 }}>
           <li>
+            Optional (recommended for judges): click <b>Seed demo data</b> on the
+            home page to create example agents + tasks.
+          </li>
+          <li>
             Create a task: <code>/tasks/new</code>
           </li>
           <li>

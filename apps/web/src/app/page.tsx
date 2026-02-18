@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/AppShell";
+import { SeedDemoCard } from "@/components/SeedDemoCard";
 
 export default function HomePage() {
   return (
@@ -83,6 +84,10 @@ export default function HomePage() {
           </div>
         </Link>
       </div>
+
+      <div style={{ height: 16 }} />
+
+      <SeedDemoCard />
 
       <div style={{ height: 16 }} />
 
