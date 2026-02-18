@@ -157,6 +157,32 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   const approveDisabled =
     busy || task.status === "APPROVED" || !!task.payoutTxHash || !demoRouterReady;
 
+  const nextAction: null | { key: "route" | "submit" | "approve" | "refresh"; label: string; hint: string } =
+    !task.workerAgentId
+      ? { key: "route", label: "Route to agent", hint: "Step 1/3 — assign this task to a worker agent." }
+      : task.status !== "SUBMITTED" && task.status !== "APPROVED"
+        ? { key: "submit", label: "Submit work", hint: "Step 2/3 — add the agent output so it can be approved." }
+        : !task.payoutTxHash
+          ? { key: "approve", label: "Approve + pay", hint: "Step 3/3 — trigger the on-chain USDm transfer + get a tx link." }
+          : task.payoutReceiptFound
+            ? null
+            : { key: "refresh", label: "Refresh payout status", hint: "Checking finality — explorer + balances update once confirmed." };
+
+  function ctaStyle(active: boolean) {
+    return active
+      ? {
+          border: "1px solid #111",
+          background: "#111",
+          color: "#fff",
+          fontWeight: 800,
+        }
+      : {
+          border: "1px solid #ddd",
+          background: "#fff",
+          color: "#111",
+        };
+  }
+
   return (
     <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -228,6 +254,23 @@ export default function TaskPage({ params }: { params: { id: string } }) {
         skill: <b>{task.skill}</b> • budget: <b>{task.budgetUsd} USDm</b> • status:{" "}
         <b>{task.status}</b>
       </div>
+
+      {nextAction ? (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(0,0,0,0.15)",
+            fontSize: 13,
+            color: "#e4e4e7",
+          }}
+        >
+          <div style={{ fontWeight: 800 }}>Suggested next: {nextAction.label}</div>
+          <div style={{ marginTop: 4, color: "#a1a1aa" }}>{nextAction.hint}</div>
+        </div>
+      ) : null}
 
       <pre
         style={{
@@ -314,7 +357,11 @@ export default function TaskPage({ params }: { params: { id: string } }) {
       ) : null}
 
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button disabled={busy} onClick={() => act("route-to-agent")}>
+        <button
+          disabled={busy}
+          onClick={() => act("route-to-agent")}
+          style={{ padding: "10px 12px", borderRadius: 12, cursor: "pointer", ...ctaStyle(nextAction?.key === "route") }}
+        >
           Route to agent
         </button>
         <button
@@ -325,12 +372,19 @@ export default function TaskPage({ params }: { params: { id: string } }) {
                 "Demo submission: translation output would be here. (Replace with real agent output)",
             })
           }
+          style={{ padding: "10px 12px", borderRadius: 12, cursor: "pointer", ...ctaStyle(nextAction?.key === "submit") }}
         >
           Submit work
         </button>
         <button
           disabled={approveDisabled}
           onClick={() => act("approve")}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            cursor: approveDisabled ? "not-allowed" : "pointer",
+            ...ctaStyle(nextAction?.key === "approve"),
+          }}
           title={
             !demoRouterReady
               ? "Missing ROUTER_PRIVATE_KEY (or FUNDER_PRIVATE_KEY fallback) in env vars. Configure a funded test wallet to enable payouts."
@@ -342,11 +396,24 @@ export default function TaskPage({ params }: { params: { id: string } }) {
           Approve + pay
         </button>
         {task.payoutTxHash ? (
-          <button disabled={busy || pollingPayout} onClick={() => refreshPayout()}>
+          <button
+            disabled={busy || pollingPayout}
+            onClick={() => refreshPayout()}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 12,
+              cursor: busy || pollingPayout ? "not-allowed" : "pointer",
+              ...ctaStyle(nextAction?.key === "refresh"),
+            }}
+          >
             {pollingPayout ? "Checking payout…" : "Refresh payout status"}
           </button>
         ) : null}
-        <button disabled={busy} onClick={refresh}>
+        <button
+          disabled={busy}
+          onClick={refresh}
+          style={{ padding: "10px 12px", borderRadius: 12, cursor: busy ? "not-allowed" : "pointer" }}
+        >
           Refresh
         </button>
       </div>
