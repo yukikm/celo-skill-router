@@ -10,19 +10,19 @@ export async function POST(
   const task = getTask(id);
   if (!task) return NextResponse.json({ ok: false }, { status: 404 });
 
-  // If no agents are registered yet, seed placeholders for demo.
+  // If no agents are registered yet, seed defaults with the platform wallet.
   seedAgents([
     {
       id: "agent:worker:translator",
       name: "Polyglot Worker",
-      skills: ["translate", "summarize"],
-      address: "0x0000000000000000000000000000000000000000",
+      skills: ["translate", "summarize", "writing"],
+      address: "0xEE8b59794Ee3A6aeeCE9aa09a118bB6ba1029e3c",
     },
     {
       id: "agent:worker:research",
       name: "Onchain Researcher",
-      skills: ["onchain-research", "celoscan"],
-      address: "0x0000000000000000000000000000000000000000",
+      skills: ["onchain-research", "celoscan", "data-analysis"],
+      address: "0xEE8b59794Ee3A6aeeCE9aa09a118bB6ba1029e3c",
     },
   ]);
 

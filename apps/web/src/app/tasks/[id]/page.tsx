@@ -49,6 +49,7 @@ export default function TaskPage({ params }: { params: { id: string } }) {
   const [pollingPayout, setPollingPayout] = useState(false);
   const [claimAgentId, setClaimAgentId] = useState("");
   const [submitOutput, setSubmitOutput] = useState("");
+  const [agents, setAgents] = useState<{ id: string; name: string; skills: string[] }[]>([]);
 
   const celoscanBase = "https://sepolia.celoscan.io";
 
@@ -72,7 +73,12 @@ export default function TaskPage({ params }: { params: { id: string } }) {
     setWorker(data.worker ?? null);
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+    fetch("/api/agents").then(r => r.json()).then(d => {
+      if (d.agents) setAgents(d.agents);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => { setAutoRefreshCount(0); }, [task?.payoutTxHash]);
 
@@ -264,24 +270,47 @@ export default function TaskPage({ params }: { params: { id: string } }) {
       {task.status === "OPEN" && !task.workerAgentId && (
         <div style={{ marginTop: 14, padding: 14, borderRadius: 14, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.05)" }}>
           <div style={{ fontWeight: 800, marginBottom: 8 }}>🙋 Claim this task (as worker)</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <input
-              value={claimAgentId}
-              onChange={(e) => setClaimAgentId(e.target.value)}
-              placeholder="Your agent ID (e.g. agent:worker:myagent)"
-              style={{ flex: 1, minWidth: 200, padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.2)", color: "#f3f3f5", fontSize: 13 }}
-            />
-            <button
-              disabled={busy || !claimAgentId.trim()}
-              onClick={() => act("claim", { agentId: claimAgentId.trim() })}
-              style={{ padding: "8px 16px", borderRadius: 10, background: "#34d399", color: "#0b0b0d", fontWeight: 800, border: "none", cursor: (busy || !claimAgentId.trim()) ? "not-allowed" : "pointer", fontSize: 13 }}
-            >
-              Claim
-            </button>
-          </div>
+          {(() => {
+            const matching = agents.filter(a => a.skills.includes(task.skill));
+            const options = matching.length > 0 ? matching : agents;
+            return (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {options.length > 0 ? (
+                  <select
+                    value={claimAgentId}
+                    onChange={(e) => setClaimAgentId(e.target.value)}
+                    style={{ flex: 1, minWidth: 200, padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.2)", color: "#f3f3f5", fontSize: 13, cursor: "pointer" }}
+                  >
+                    <option value="">Select an agent…</option>
+                    {options.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.skills.join(", ")})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={claimAgentId}
+                    onChange={(e) => setClaimAgentId(e.target.value)}
+                    placeholder="Your agent ID (e.g. agent:worker:myagent)"
+                    style={{ flex: 1, minWidth: 200, padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.2)", color: "#f3f3f5", fontSize: 13 }}
+                  />
+                )}
+                <button
+                  disabled={busy || !claimAgentId.trim()}
+                  onClick={() => act("claim", { agentId: claimAgentId.trim() })}
+                  style={{ padding: "8px 16px", borderRadius: 10, background: "#34d399", color: "#0b0b0d", fontWeight: 800, border: "none", cursor: (busy || !claimAgentId.trim()) ? "not-allowed" : "pointer", fontSize: 13 }}
+                >
+                  Claim
+                </button>
+              </div>
+            );
+          })()}
           <div style={{ fontSize: 11, color: "#a1a1aa", marginTop: 6 }}>
-            Must be registered with the required skill: <b>{task.skill}</b>.{" "}
-            <Link href="/agents/register" style={{ color: "#34d399" }}>Register first →</Link>
+            {agents.filter(a => a.skills.includes(task.skill)).length > 0
+              ? <>Showing agents with skill <b>{task.skill}</b>.</>
+              : <>No agents with skill <b>{task.skill}</b> found.{" "}<Link href="/agents/register" style={{ color: "#34d399" }}>Register one →</Link></>
+            }
           </div>
         </div>
       )}
