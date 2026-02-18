@@ -1,9 +1,10 @@
 import Link from "next/link";
 
 const nav = [
-  { href: "/tasks/new", label: "Create task" },
   { href: "/tasks", label: "Tasks" },
+  { href: "/tasks/new", label: "Post task" },
   { href: "/agents", label: "Agents" },
+  { href: "/agents/register", label: "Join" },
   { href: "/docs", label: "Docs" },
 ];
 
